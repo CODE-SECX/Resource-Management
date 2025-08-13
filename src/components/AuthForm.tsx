@@ -59,10 +59,10 @@ export function AuthForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-indigo-600 rounded-full flex items-center justify-center">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
             <BookOpen className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
@@ -73,7 +73,8 @@ export function AuthForm() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+          <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             {isSignUp && (
               <div>
@@ -87,7 +88,7 @@ export function AuthForm() {
                   required={isSignUp}
                   value={formData.name}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -104,7 +105,7 @@ export function AuthForm() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                 placeholder="Enter your email"
               />
             </div>
@@ -120,7 +121,7 @@ export function AuthForm() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                 placeholder="Enter your password"
                 minLength={6}
               />
@@ -131,7 +132,7 @@ export function AuthForm() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -144,7 +145,7 @@ export function AuthForm() {
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+              className="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors"
             >
               {isSignUp 
                 ? 'Already have an account? Sign in' 
@@ -153,6 +154,7 @@ export function AuthForm() {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

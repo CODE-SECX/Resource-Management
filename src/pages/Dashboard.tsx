@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, GraduationCap, Tag, TrendingUp, Clock, Star, Home, Menu, X } from 'lucide-react';
-
-// Mock auth context and supabase for demo
-const useAuth = () => ({ 
-  user: { 
-    user_metadata: { name: 'John Doe' }, 
-    email: 'john@example.com' 
-  } 
-});
+import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { BookOpen, GraduationCap, Tag, TrendingUp, Clock, Star, Plus, ArrowRight, Activity } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Stats {
   totalResources: number;
@@ -16,36 +12,95 @@ interface Stats {
   recentItems: number;
 }
 
-const mockStats: Stats = {
-  totalResources: 24,
-  totalLearning: 18,
-  totalCategories: 8,
-  recentItems: 12,
-};
+interface RecentResource {
+  id: string;
+  title: string;
+  created_at: string;
+}
 
-const mockRecentResources = [
-  { id: 1, title: 'React Best Practices Guide', created_at: '2025-08-10' },
-  { id: 2, title: 'JavaScript ES6 Features', created_at: '2025-08-09' },
-  { id: 3, title: 'CSS Grid Layout Mastery', created_at: '2025-08-08' },
-  { id: 4, title: 'Node.js Performance Tips', created_at: '2025-08-07' },
-  { id: 5, title: 'Database Design Principles', created_at: '2025-08-06' },
-];
-
-const mockRecentLearning = [
-  { id: 1, title: 'Advanced TypeScript', difficulty_level: 'Advanced', created_at: '2025-08-11' },
-  { id: 2, title: 'React Hooks Deep Dive', difficulty_level: 'Intermediate', created_at: '2025-08-10' },
-  { id: 3, title: 'Git Fundamentals', difficulty_level: 'Beginner', created_at: '2025-08-09' },
-  { id: 4, title: 'System Design Basics', difficulty_level: 'Expert', created_at: '2025-08-08' },
-  { id: 5, title: 'API Development', difficulty_level: 'Intermediate', created_at: '2025-08-07' },
-];
+interface RecentLearning {
+  id: string;
+  title: string;
+  difficulty_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+  created_at: string;
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<Stats>(mockStats);
-  const [recentResources, setRecentResources] = useState(mockRecentResources);
-  const [recentLearning, setRecentLearning] = useState(mockRecentLearning);
-  const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stats, setStats] = useState<Stats>({
+    totalResources: 0,
+    totalLearning: 0,
+    totalCategories: 0,
+    recentItems: 0,
+  });
+  const [recentResources, setRecentResources] = useState<RecentResource[]>([]);
+  const [recentLearning, setRecentLearning] = useState<RecentLearning[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch stats
+      const [resourcesResult, learningResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('resources')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id),
+        supabase
+          .from('learning')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id),
+        supabase
+          .from('categories')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id),
+      ]);
+
+      // Fetch recent resources
+      const { data: recentResourcesData } = await supabase
+        .from('resources')
+        .select('id, title, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Fetch recent learning
+      const { data: recentLearningData } = await supabase
+        .from('learning')
+        .select('id, title, difficulty_level, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      const totalResources = resourcesResult.count || 0;
+      const totalLearning = learningResult.count || 0;
+      const totalCategories = categoriesResult.count || 0;
+
+      setStats({
+        totalResources,
+        totalLearning,
+        totalCategories,
+        recentItems: totalResources + totalLearning,
+      });
+
+      setRecentResources(recentResourcesData || []);
+      setRecentLearning(recentLearningData || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statCards = [
     {
@@ -95,11 +150,37 @@ export default function Dashboard() {
     }
   };
 
-  const navigationItems = [
-    { name: 'Dashboard', icon: Home, href: '/', current: true },
-    { name: 'Resources', icon: BookOpen, href: '/resources', current: false },
-    { name: 'Learning', icon: GraduationCap, href: '/learning', current: false },
-    { name: 'Categories', icon: Tag, href: '/categories', current: false },
+  const quickActions = [
+    {
+      title: 'Add Resource',
+      description: 'Create new resource',
+      icon: BookOpen,
+      href: '/resources?action=new',
+      color: 'border-blue-300 hover:border-blue-400 hover:bg-blue-50',
+      iconColor: 'text-blue-600',
+      textColor: 'text-blue-900',
+      descColor: 'text-blue-700',
+    },
+    {
+      title: 'Add Learning',
+      description: 'Track your progress',
+      icon: GraduationCap,
+      href: '/learning?action=new',
+      color: 'border-emerald-300 hover:border-emerald-400 hover:bg-emerald-50',
+      iconColor: 'text-emerald-600',
+      textColor: 'text-emerald-900',
+      descColor: 'text-emerald-700',
+    },
+    {
+      title: 'Add Category',
+      description: 'Organize content',
+      icon: Tag,
+      href: '/categories?action=new',
+      color: 'border-purple-300 hover:border-purple-400 hover:bg-purple-50',
+      iconColor: 'text-purple-600',
+      textColor: 'text-purple-900',
+      descColor: 'text-purple-700',
+    },
   ];
 
   if (loading) {
@@ -115,324 +196,233 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 border-r border-gray-200">
-          <div className="flex h-16 shrink-0 items-center border-b border-gray-100">
-            <h1 className="text-xl font-bold text-indigo-600">Knowledge Hub</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      {/* Welcome Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 px-6 py-10 sm:px-8 sm:py-16 shadow-2xl">
+        <div className="relative z-10 max-w-4xl">
+          <div className="flex items-center mb-4">
+            <Activity className="h-8 w-8 text-indigo-200 mr-3" />
+            <span className="text-indigo-200 font-medium text-sm uppercase tracking-wider">Dashboard</span>
           </div>
-          <nav className="flex flex-1 flex-col">
-            <ul className="flex flex-1 flex-col gap-y-2">
-              {navigationItems.map((item) => (
-                <li key={item.name}>
-                  <a
-                    href={item.href}
-                    className={`group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-medium transition-all duration-200 ${
-                      item.current
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                        : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <item.icon
-                      className={`h-5 w-5 shrink-0 ${
-                        item.current ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500'
-                      }`}
-                    />
-                    {item.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <h1 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl mb-4">
+            Welcome back, {user?.user_metadata?.name || user?.email?.split('@')[0]}!
+          </h1>
+          <p className="text-lg text-indigo-100 sm:text-xl max-w-3xl leading-relaxed">
+            Here's an overview of your knowledge collection and learning progress.
+          </p>
         </div>
+        {/* Decorative background pattern */}
+        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 sm:h-56 sm:w-56" />
+        <div className="absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-white/5 sm:h-48 sm:w-48" />
+        <div className="absolute top-1/2 right-1/4 h-24 w-24 rounded-full bg-white/5" />
       </div>
 
-      {/* Mobile Sidebar */}
-      <div className={`relative z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
-        <div className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-indigo-600">Knowledge Hub</h1>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="rounded-md p-2.5 text-gray-700 hover:bg-gray-100"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-          <nav className="mt-6">
-            <ul className="space-y-2">
-              {navigationItems.map((item) => (
-                <li key={item.name}>
-                  <a
-                    href={item.href}
-                    className={`group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-medium transition-all duration-200 ${
-                      item.current
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                        : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <item.icon
-                      className={`h-5 w-5 shrink-0 ${
-                        item.current ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500'
-                      }`}
-                    />
-                    {item.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="lg:pl-72">
-        {/* Mobile header */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-md p-2.5 text-gray-700 hover:bg-gray-100"
+      {/* Stats Grid */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((stat, index) => (
+          <div
+            key={index}
+            className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-lg ring-1 ring-gray-900/5 transition-all duration-300 hover:shadow-xl hover:ring-gray-900/10 hover:-translate-y-1"
           >
-            <Menu className="h-6 w-6" />
-          </button>
-          <div className="h-6 w-px bg-gray-200" />
-          <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-        </div>
-
-        {/* Page content */}
-        <main className="py-6 sm:py-8 lg:py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="space-y-8">
-              {/* Welcome Header */}
-              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 px-6 py-8 sm:px-8 sm:py-10">
-                <div className="relative z-10">
-                  <h1 className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-                    Welcome back, {user?.user_metadata?.name || user?.email?.split('@')[0]}!
-                  </h1>
-                  <p className="mt-3 text-base text-indigo-100 sm:text-lg max-w-2xl">
-                    Here's an overview of your knowledge collection and learning progress.
-                  </p>
-                </div>
-                {/* Decorative background pattern */}
-                <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-white/10 sm:h-40 sm:w-40" />
-                <div className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-white/5 sm:h-32 sm:w-32" />
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
-                {statCards.map((stat, index) => (
-                  <div
-                    key={index}
-                    className="group relative overflow-hidden rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200 hover:shadow-md hover:ring-gray-900/10"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">
-                          {stat.title}
-                        </p>
-                        <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-                          {stat.value}
-                        </p>
-                      </div>
-                      <div className={`flex-shrink-0 p-2 sm:p-3 rounded-lg ${stat.iconBg}`}>
-                        <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color}`} />
-                      </div>
-                    </div>
-                    {stat.link && (
-                      <div className="mt-3 sm:mt-4">
-                        <a
-                          href={stat.link}
-                          className="inline-flex items-center text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-700 group-hover:translate-x-1 transition-all duration-200"
-                        >
-                          View all
-                          <TrendingUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Recent Activity */}
-              <div className="grid gap-6 lg:gap-8 xl:grid-cols-2">
-                {/* Recent Resources */}
-                <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-900/5">
-                  <div className="border-b border-gray-200 bg-gray-50/50 px-4 py-5 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-                            <BookOpen className="h-4 w-4 text-blue-600" />
-                          </div>
-                        </div>
-                        <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
-                          Recent Resources
-                        </h2>
-                      </div>
-                      <a
-                        href="/resources"
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-                      >
-                        View all
-                      </a>
-                    </div>
-                  </div>
-                  <div className="px-4 py-5 sm:p-6">
-                    {recentResources.length > 0 ? (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
-                        {recentResources.map((resource) => (
-                          <div
-                            key={resource.id}
-                            className="group flex items-center space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50"
-                          >
-                            <div className="flex-shrink-0">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors">
-                                <BookOpen className="h-4 w-4 text-blue-600" />
-                              </div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-gray-900">
-                                {resource.title}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(resource.created_at).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <BookOpen className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2 text-sm text-gray-500">No resources yet</p>
-                        <p className="text-xs text-gray-400">Create your first resource to get started</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recent Learning */}
-                <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-900/5">
-                  <div className="border-b border-gray-200 bg-gray-50/50 px-4 py-5 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
-                            <GraduationCap className="h-4 w-4 text-emerald-600" />
-                          </div>
-                        </div>
-                        <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
-                          Recent Learning
-                        </h2>
-                      </div>
-                      <a
-                        href="/learning"
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-                      >
-                        View all
-                      </a>
-                    </div>
-                  </div>
-                  <div className="px-4 py-5 sm:p-6">
-                    {recentLearning.length > 0 ? (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
-                        {recentLearning.map((item) => (
-                          <div
-                            key={item.id}
-                            className="group flex items-center space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50"
-                          >
-                            <div className="flex-shrink-0">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 group-hover:bg-emerald-100 transition-colors">
-                                <GraduationCap className="h-4 w-4 text-emerald-600" />
-                              </div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-gray-900">
-                                {item.title}
-                              </p>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <span
-                                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getDifficultyColor(
-                                    item.difficulty_level
-                                  )}`}
-                                >
-                                  {item.difficulty_level}
-                                </span>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(item.created_at).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <GraduationCap className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2 text-sm text-gray-500">No learning items yet</p>
-                        <p className="text-xs text-gray-400">Add your first learning item to track progress</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-900/5">
-                <div className="border-b border-gray-200 bg-gray-50/50 px-4 py-5 sm:px-6">
-                  <h2 className="flex items-center text-base font-semibold text-gray-900 sm:text-lg">
-                    <Star className="mr-3 h-5 w-5 text-amber-500" />
-                    Quick Actions
-                  </h2>
-                </div>
-                <div className="p-4 sm:p-6">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <a
-                      href="/resources?action=new"
-                      className="group relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-300 p-6 text-center transition-all duration-200 hover:border-blue-400 hover:bg-blue-50"
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-600 truncate uppercase tracking-wide">
+                  {stat.title}
+                </p>
+                <p className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2 mb-1">
+                  {stat.value}
+                </p>
+                {stat.link && (
+                  <div className="mt-3">
+                    <Link
+                      to={stat.link}
+                      className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-700 group-hover:translate-x-1 transition-all duration-200"
                     >
-                      <BookOpen className="mx-auto h-8 w-8 text-blue-600 transition-transform group-hover:scale-110" />
-                      <p className="mt-2 text-sm font-medium text-blue-900">Add Resource</p>
-                      <p className="mt-1 text-xs text-blue-700">Create new resource</p>
-                    </a>
-                    <a
-                      href="/learning?action=new"
-                      className="group relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-emerald-300 p-6 text-center transition-all duration-200 hover:border-emerald-400 hover:bg-emerald-50"
-                    >
-                      <GraduationCap className="mx-auto h-8 w-8 text-emerald-600 transition-transform group-hover:scale-110" />
-                      <p className="mt-2 text-sm font-medium text-emerald-900">Add Learning</p>
-                      <p className="mt-1 text-xs text-emerald-700">Track your progress</p>
-                    </a>
-                    <a
-                      href="/categories?action=new"
-                      className="group relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-purple-300 p-6 text-center transition-all duration-200 hover:border-purple-400 hover:bg-purple-50 sm:col-span-2 lg:col-span-1"
-                    >
-                      <Tag className="mx-auto h-8 w-8 text-purple-600 transition-transform group-hover:scale-110" />
-                      <p className="mt-2 text-sm font-medium text-purple-900">Add Category</p>
-                      <p className="mt-1 text-xs text-purple-700">Organize content</p>
-                    </a>
+                      View all
+                      <ArrowRight className="ml-1 h-4 w-4" />
+                    </Link>
                   </div>
-                </div>
+                )}
+              </div>
+              <div className={`flex-shrink-0 p-3 rounded-xl ${stat.iconBg} group-hover:scale-110 transition-transform duration-300`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
               </div>
             </div>
           </div>
-        </main>
+        ))}
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid gap-8 xl:grid-cols-2">
+        {/* Recent Resources */}
+        <div className="overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Recent Resources
+                </h2>
+              </div>
+              <Link
+                to="/resources"
+                className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                View all
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="p-6">
+            {recentResources.length > 0 ? (
+              <div className="space-y-4 max-h-80 overflow-y-auto">
+                {recentResources.map((resource) => (
+                  <div
+                    key={resource.id}
+                    className="group flex items-center space-x-4 rounded-lg p-3 transition-all duration-200 hover:bg-blue-50 hover:shadow-md"
+                  >
+                    <div className="flex-shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                        <BookOpen className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-blue-900">
+                        {resource.title}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1 font-medium">
+                        {new Date(resource.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <BookOpen className="mx-auto h-12 w-12 text-gray-300" />
+                <p className="mt-2 text-sm text-gray-500">No resources yet</p>
+                <p className="text-xs text-gray-400 mb-4">Create your first resource to get started</p>
+                <Link
+                  to="/resources?action=new"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Resource
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Learning */}
+        <div className="overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-green-50 px-6 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                    <GraduationCap className="h-5 w-5 text-emerald-600" />
+                  </div>
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Recent Learning
+                </h2>
+              </div>
+              <Link
+                to="/learning"
+                className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                View all
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="p-6">
+            {recentLearning.length > 0 ? (
+              <div className="space-y-4 max-h-80 overflow-y-auto">
+                {recentLearning.map((item) => (
+                  <div
+                    key={item.id}
+                    className="group flex items-center space-x-4 rounded-lg p-3 transition-all duration-200 hover:bg-emerald-50 hover:shadow-md"
+                  >
+                    <div className="flex-shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 group-hover:bg-emerald-100 transition-colors">
+                        <GraduationCap className="h-4 w-4 text-emerald-600" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-emerald-900">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getDifficultyColor(
+                            item.difficulty_level
+                          )}`}
+                        >
+                          {item.difficulty_level}
+                        </span>
+                        <p className="text-xs text-gray-500 font-medium">
+                          {new Date(item.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <GraduationCap className="mx-auto h-12 w-12 text-gray-300" />
+                <p className="mt-2 text-sm text-gray-500">No learning items yet</p>
+                <p className="text-xs text-gray-400 mb-4">Add your first learning item to track progress</p>
+                <Link
+                  to="/learning?action=new"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Learning
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
+        <div className="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-6">
+          <h2 className="flex items-center text-base font-semibold text-gray-900 sm:text-lg">
+            <Star className="mr-3 h-6 w-6 text-amber-500" />
+            Quick Actions
+          </h2>
+        </div>
+        <div className="p-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {quickActions.map((action, index) => (
+              <Link
+                key={index}
+                to={action.href}
+                className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg ${action.color}`}
+              >
+                <action.icon className={`mx-auto h-10 w-10 transition-transform group-hover:scale-125 ${action.iconColor}`} />
+                <p className={`mt-3 text-base font-semibold ${action.textColor}`}>{action.title}</p>
+                <p className={`mt-2 text-sm ${action.descColor}`}>{action.description}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   );

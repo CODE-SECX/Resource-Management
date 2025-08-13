@@ -221,13 +221,13 @@ export function Resources() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Resources</h1>
-          <p className="text-gray-600">Manage your resource collection</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Resources</h1>
+          <p className="text-gray-600 mt-1">Manage your resource collection</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <button
             onClick={() => setIsGridLayout(!isGridLayout)}
-            className="p-2 text-gray-600 hover:text-indigo-600 rounded-lg hover:bg-gray-100"
+            className="p-2 text-gray-600 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition-colors"
             title={isGridLayout ? "Switch to list view" : "Switch to grid view"}
           >
             {isGridLayout ? (
@@ -248,7 +248,7 @@ export function Resources() {
               });
               setShowForm(true);
             }}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Resource
@@ -257,7 +257,7 @@ export function Resources() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
         <div className="flex items-center space-x-4">
           <div className="flex-1">
             <div className="relative">
@@ -267,7 +267,7 @@ export function Resources() {
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
               />
             </div>
           </div>
@@ -281,7 +281,7 @@ export function Resources() {
         {categories.length > 0 && (
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-2">Categories</h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -292,7 +292,7 @@ export function Resources() {
                         : [...prev, category.id]
                     );
                   }}
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedCategories.includes(category.id)
                       ? 'text-white'
                       : 'text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -315,7 +315,7 @@ export function Resources() {
         {allTags.length > 0 && (
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-2">Tags</h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
               {allTags.map((tag) => (
                 <button
                   key={tag}
@@ -326,7 +326,7 @@ export function Resources() {
                         : [...prev, tag]
                     );
                   }}
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedTags.includes(tag)
                       ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                       : 'text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -346,9 +346,9 @@ export function Resources() {
 
       {/* Resource Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50/50">
               <h2 className="text-lg font-semibold">
                 {editingResource ? 'Edit Resource' : 'Add New Resource'}
               </h2>
@@ -363,7 +363,7 @@ export function Resources() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                 />
               </div>
 
@@ -376,7 +376,7 @@ export function Resources() {
                   required
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                 />
               </div>
 
@@ -399,7 +399,7 @@ export function Resources() {
                   value={formData.tags}
                   onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
                   placeholder="javascript, react, tutorial"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                 />
               </div>
 
@@ -408,7 +408,7 @@ export function Resources() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Categories
                   </label>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3">
                     {categories.map((category) => (
                       <label key={category.id} className="flex items-center">
                         <input
@@ -442,13 +442,13 @@ export function Resources() {
                     setShowForm(false);
                     setEditingResource(null);
                   }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
                 >
                   {editingResource ? 'Update' : 'Create'} Resource
                 </button>
@@ -459,7 +459,7 @@ export function Resources() {
       )}
 
       {/* Resources Grid/List View */}
-      <div className={isGridLayout ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+      <div className={isGridLayout ? "grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredResources.map((resource) => {
           const isExpanded = expandedItemId === resource.id;
           return (
@@ -468,7 +468,7 @@ export function Resources() {
               className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
-              <div className={`${isGridLayout ? 'p-6' : 'p-4'}`}>
+              <div className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 flex-1 mr-2">
                     {resource.title}
@@ -479,7 +479,7 @@ export function Resources() {
                         e.stopPropagation();
                         handleEdit(resource);
                       }}
-                      className="p-1 text-gray-500 hover:text-indigo-600"
+                      className="p-1 text-gray-500 hover:text-indigo-600 transition-colors"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -488,7 +488,7 @@ export function Resources() {
                         e.stopPropagation();
                         handleDelete(resource.id);
                       }}
-                      className="p-1 text-gray-500 hover:text-red-600"
+                      className="p-1 text-gray-500 hover:text-red-600 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -521,7 +521,7 @@ export function Resources() {
 
                 {/* Tags */}
                 {resource.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
+                  <div className="flex flex-wrap gap-1.5 mb-4">
                     {resource.tags.map((tag, index) => (
                       <span
                         key={index}
@@ -539,7 +539,7 @@ export function Resources() {
                     href={resource.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >
                     Open Resource
@@ -557,7 +557,7 @@ export function Resources() {
 
       {filteredResources.length === 0 && (
         <div className="text-center py-12">
-          <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <Search className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -571,7 +571,7 @@ export function Resources() {
           {resources.length === 0 && (
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Your First Resource

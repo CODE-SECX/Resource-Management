@@ -192,8 +192,8 @@ export function Categories() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-          <p className="text-gray-600">Organize your resources and learning items</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Categories</h1>
+          <p className="text-gray-600 mt-1">Organize your resources and learning items</p>
         </div>
         <button
           onClick={() => {
@@ -205,7 +205,7 @@ export function Categories() {
             });
             setShowForm(true);
           }}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Category
@@ -214,9 +214,9 @@ export function Categories() {
 
       {/* Category Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">
                   {editingCategory ? 'Edit Category' : 'Add New Category'}
@@ -226,7 +226,7 @@ export function Categories() {
                     setShowForm(false);
                     setEditingCategory(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -242,7 +242,7 @@ export function Categories() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                   placeholder="Enter category name"
                 />
               </div>
@@ -255,7 +255,7 @@ export function Categories() {
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                   placeholder="Optional description"
                 />
               </div>
@@ -269,7 +269,7 @@ export function Categories() {
                     type="color"
                     value={formData.color}
                     onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-12 h-10 border border-gray-300 rounded-lg"
+                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
                   />
                   <span className="text-sm text-gray-600">{formData.color}</span>
                 </div>
@@ -279,7 +279,7 @@ export function Categories() {
                       key={color}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, color }))}
-                      className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                      className={`w-8 h-8 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
                         formData.color === color 
                           ? 'border-gray-900 scale-110' 
                           : 'border-gray-300 hover:border-gray-500'
@@ -298,13 +298,13 @@ export function Categories() {
                     setShowForm(false);
                     setEditingCategory(null);
                   }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
                 >
                   {editingCategory ? 'Update' : 'Create'} Category
                 </button>
@@ -315,14 +315,14 @@ export function Categories() {
       )}
 
       {/* Categories Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => {
           const categoryStats = stats[category.id] || { resources: 0, learning: 0 };
           const totalItems = categoryStats.resources + categoryStats.learning;
 
           return (
             <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3 flex-1">
                     <div
@@ -345,13 +345,13 @@ export function Categories() {
                   <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
                     <button
                       onClick={() => handleEdit(category)}
-                      className="p-1 text-gray-500 hover:text-indigo-600"
+                      className="p-1 text-gray-500 hover:text-indigo-600 transition-colors"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(category.id)}
-                      className="p-1 text-gray-500 hover:text-red-600"
+                      className="p-1 text-gray-500 hover:text-red-600 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -409,7 +409,7 @@ export function Categories() {
 
       {categories.length === 0 && (
         <div className="text-center py-12">
-          <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <Tag className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -420,7 +420,7 @@ export function Categories() {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Category

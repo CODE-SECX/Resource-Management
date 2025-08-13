@@ -5,6 +5,7 @@ import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, Grid, Layout
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useSearchParams } from 'react-router-dom';
+import { Modal } from '../components/Modal';
 
 export function Resources() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export function Resources() {
     tags: '',
     categoryIds: [] as string[],
   });
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -579,6 +581,38 @@ export function Resources() {
           )}
         </div>
       )}
+
+      {/* Resource Details Modal */}
+      <Modal
+        isOpen={!!selectedResource}
+        onClose={() => setSelectedResource(null)}
+        title={selectedResource?.title || ''}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="prose max-w-none">
+            <p className="text-gray-600">{selectedResource?.description}</p>
+          </div>
+          
+          {selectedResource?.url && (
+            <div className="mt-4">
+              <a
+                href={selectedResource.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Visit Resource
+              </a>
+            </div>
+          )}
+          
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+            <span>Category: {selectedResource?.category}</span>
+            <span>Added: {selectedResource?.created_at && new Date(selectedResource.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

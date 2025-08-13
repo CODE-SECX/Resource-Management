@@ -5,6 +5,7 @@ import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, GraduationCa
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useSearchParams } from 'react-router-dom';
+import { Modal } from '../components/Modal';
 
 const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
@@ -30,6 +31,7 @@ export function Learning() {
     difficulty_level: 'Beginner' as const,
     categoryIds: [] as string[],
   });
+  const [selectedResource, setSelectedResource] = useState<Learning | null>(null);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -525,6 +527,33 @@ export function Learning() {
           </div>
         </div>
       )}
+
+      {/* Learning Detail Modal */}
+      <Modal
+        isOpen={!!selectedResource}
+        onClose={() => setSelectedResource(null)}
+        title={selectedResource?.title || ''}
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="prose prose-lg max-w-none">
+            <div dangerouslySetInnerHTML={{ __html: selectedResource?.description || '' }} />
+          </div>
+          
+          <div className="mt-6 flex flex-wrap gap-2">
+            {selectedResource?.tags.map((tag, index) => (
+              <span key={index} className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                {tag}
+              </span>
+            ))}
+          </div>
+          
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+            <span>Category: {selectedResource?.categories?.map(cat => cat.name).join(', ')}</span>
+            <span>Added: {selectedResource?.created_at && new Date(selectedResource.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </Modal>
 
       {/* Learning Grid/List View */}
       <div className={isGridLayout ? "grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>

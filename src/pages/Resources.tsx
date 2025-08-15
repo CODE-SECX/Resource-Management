@@ -371,11 +371,10 @@ export function Resources() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL *
+                  URL
                 </label>
                 <input
                   type="url"
-                  required
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
@@ -537,16 +536,20 @@ export function Resources() {
                 )}
 
                 <div className="flex items-center justify-between">
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Open Resource
-                    <ExternalLink className="ml-1 w-4 h-4" />
-                  </a>
+                  {resource.url ? (
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Open Resource
+                      <ExternalLink className="ml-1 w-4 h-4" />
+                    </a>
+                  ) : (
+                    <span className="text-sm text-gray-400 italic">No URL provided</span>
+                  )}
                   <span className="text-xs text-gray-500">
                     {new Date(resource.created_at).toLocaleDateString()}
                   </span>

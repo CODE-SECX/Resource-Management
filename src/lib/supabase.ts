@@ -10,8 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
 
 export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabaseAnonKey,
   {
     auth: {
       autoRefreshToken: true,

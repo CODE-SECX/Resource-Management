@@ -252,6 +252,55 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Index Section */}
+      <div className="grid gap-6 sm:grid-cols-2">
+        {/* Learning Index */}
+        <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-8 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-white/10 rounded-lg">
+                <GraduationCap className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Learning Index</h3>
+            <p className="text-blue-100 mb-6">Browse all learning materials organized by categories and difficulty levels</p>
+            <Link
+              to="/learning/index"
+              className="inline-flex items-center px-4 py-2 bg-white text-indigo-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+            >
+              View Learning Index
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8">
+            <GraduationCap className="h-32 w-32 text-white" />
+          </div>
+        </div>
+
+        {/* Resources Index */}
+        <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 p-8 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-white/10 rounded-lg">
+                <BookOpen className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Resources Index</h3>
+            <p className="text-pink-100 mb-6">Access your complete collection of resources organized by categories</p>
+            <Link
+              to="/resources/index"
+              className="inline-flex items-center px-4 py-2 bg-white text-pink-600 rounded-lg font-medium hover:bg-pink-50 transition-colors"
+            >
+              View Resources Index
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8">
+            <BookOpen className="h-32 w-32 text-white" />
+          </div>
+        </div>
+      </div>
+
       {/* Recent Activity */}
       <div className="grid gap-8 xl:grid-cols-2">
         {/* Recent Resources */}

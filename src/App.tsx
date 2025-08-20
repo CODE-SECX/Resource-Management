@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import { Resources } from './pages/Resources';
 import { Learning } from './pages/Learning';
 import { Categories } from './pages/Categories';
+import { Index } from './pages/Index';
+import { ResourceIndex } from './pages/ResourceIndex';
 import { Toaster } from 'react-hot-toast';
 
 function AppRoutes() {
@@ -29,7 +31,9 @@ function AppRoutes() {
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/resources/index" element={<ResourceIndex />} />
         <Route path="/learning" element={<Learning />} />
+        <Route path="/learning/index" element={<Index />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>

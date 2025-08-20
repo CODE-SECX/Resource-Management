@@ -21,6 +21,7 @@ export function Learning() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -227,7 +228,11 @@ export function Learning() {
     const matchesDifficulty = selectedDifficulty.length === 0 ||
                              selectedDifficulty.includes(item.difficulty_level);
 
-    return matchesSearch && matchesCategories && matchesTags && matchesDifficulty;
+    const matchesDate = (!dateRange.start && !dateRange.end) ||
+                       ((!dateRange.start || new Date(item.created_at) >= new Date(dateRange.start)) &&
+                        (!dateRange.end || new Date(item.created_at) <= new Date(dateRange.end)));
+
+    return matchesSearch && matchesCategories && matchesTags && matchesDifficulty && matchesDate;
   });
 
   const [learningItems, setLearningItems] = useState([]);
@@ -335,6 +340,40 @@ export function Learning() {
                 )}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Date Range</h4>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-600 mb-1">From</label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-600 mb-1">To</label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+              />
+            </div>
+            {(dateRange.start || dateRange.end) && (
+              <button
+                onClick={() => setDateRange({ start: '', end: '' })}
+                className="mt-5 p-2 text-gray-500 hover:text-red-600 transition-colors"
+                title="Clear date filter"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

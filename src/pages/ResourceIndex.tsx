@@ -102,7 +102,7 @@ export function ResourceIndex() {
       } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-64 bg-gray-50 border-r border-gray-200 p-4 space-y-6 transform transition-transform duration-200 ease-in-out`}>
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Categories</h2>
-          <div className="space-y-1">
+          <div className="grid grid-cols-2 gap-1">
             <button
               onClick={() => setSelectedCategories([])}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
@@ -138,7 +138,7 @@ export function ResourceIndex() {
         {/* Tags Section */}
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Tags</h2>
-          <div className="space-y-1">
+          <div className="grid grid-cols-2 gap-1">
             {allTags.map((tag) => (
               <button
                 key={tag}

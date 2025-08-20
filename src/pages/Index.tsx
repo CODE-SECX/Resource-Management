@@ -11,9 +11,12 @@ export function Index() {
   const [learning, setLearning] = useState<Learning[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const allTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
   const [selectedItem, setSelectedItem] = useState<Learning | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -70,12 +73,14 @@ export function Index() {
 
   const filteredLearning = learning.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || 
-                          item.categories?.some(cat => cat.id === selectedCategory);
-    const matchesDifficulty = selectedDifficulty === 'All' || 
-                             item.difficulty_level === selectedDifficulty;
+    const matchesCategory = selectedCategories.length === 0 || 
+                          item.categories?.some(cat => selectedCategories.includes(cat.id));
+    const matchesDifficulty = selectedDifficulties.length === 0 || 
+                             selectedDifficulties.includes(item.difficulty_level);
+    const matchesTags = selectedTags.length === 0 ||
+                       selectedTags.some(tag => item.tags?.includes(tag));
 
-    return matchesSearch && matchesCategory && matchesDifficulty;
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesTags;
   });
 
   const getDifficultyColor = (level: string) => {
@@ -114,9 +119,9 @@ export function Index() {
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Categories</h2>
           <div className="space-y-1">
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => setSelectedCategories([])}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
-                selectedCategory === 'all'
+                selectedCategories.length === 0
                   ? 'bg-indigo-50 text-indigo-700'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
@@ -126,9 +131,15 @@ export function Index() {
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => {
+                  setSelectedCategories(prev =>
+                    prev.includes(category.id)
+                      ? prev.filter(id => id !== category.id)
+                      : [...prev, category.id]
+                  );
+                }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
-                  selectedCategory === category.id
+                  selectedCategories.includes(category.id)
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -145,9 +156,15 @@ export function Index() {
             {difficultyLevels.map((level) => (
               <button
                 key={level}
-                onClick={() => setSelectedDifficulty(level)}
+                onClick={() => {
+                  setSelectedDifficulties(prev =>
+                    prev.includes(level)
+                      ? prev.filter(l => l !== level)
+                      : [...prev, level]
+                  );
+                }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
-                  selectedDifficulty === level
+                  selectedDifficulties.includes(level)
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -155,6 +172,35 @@ export function Index() {
                 {level}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Tags Section */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Tags</h2>
+          <div className="space-y-1">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => {
+                  setSelectedTags(prev =>
+                    prev.includes(tag)
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
+                  selectedTags.includes(tag)
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+            {allTags.length === 0 && (
+              <p className="text-sm text-gray-500 px-3">No tags available</p>
+            )}
           </div>
         </div>
       </div>

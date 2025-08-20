@@ -28,6 +28,7 @@ export function Resources() {
     categoryIds: [] as string[],
   });
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -210,6 +211,11 @@ export function Resources() {
     return matchesSearch && matchesCategories && matchesTags;
   });
 
+  const truncateContent = (content: string, maxLength = 150) => {
+    if (content.length <= maxLength) return content;
+    return content.substr(0, maxLength) + '...';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -371,11 +377,10 @@ export function Resources() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL *
+                  URL 
                 </label>
                 <input
                   type="url"
-                  required
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
@@ -470,9 +475,15 @@ export function Resources() {
               className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
-              <div className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'}`}>
+              <div 
+                className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'} cursor-pointer`}
+                onClick={() => {
+                  setSelectedResource(resource);
+                  setIsModalOpen(true);
+                }}
+              >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 flex-1 mr-2">
+                  <h3 className="text-xl font-bold text-gray-900 flex-1 mr-2">
                     {resource.title}
                   </h3>
                   <div className="flex items-center space-x-1 flex-shrink-0">
@@ -499,9 +510,7 @@ export function Resources() {
 
                 {resource.description && (
                   <div 
-                    className={`text-gray-600 text-sm mb-3 prose prose-sm max-w-none ${
-                      !isGridLayout && !isExpanded ? 'line-clamp-2' : ''
-                    }`}
+                    className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none line-clamp-3"
                     dangerouslySetInnerHTML={{ __html: resource.description }}
                   />
                 )}
@@ -586,13 +595,15 @@ export function Resources() {
       <Modal
         isOpen={!!selectedResource}
         onClose={() => setSelectedResource(null)}
-        title={selectedResource?.title || ''}
+        title=""
         size="lg"
       >
         <div className="space-y-4">
-          <div className="prose max-w-none">
-            <p className="text-gray-600">{selectedResource?.description}</p>
-          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">{selectedResource?.title}</h1>
+          <div 
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: selectedResource?.description || '' }}
+          />
           
           {selectedResource?.url && (
             <div className="mt-4">
@@ -608,7 +619,7 @@ export function Resources() {
           )}
           
           <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-            <span>Category: {selectedResource?.category}</span>
+            <span>Category: {selectedResource?.categories?.map(cat => cat.name).join(', ')}</span>
             <span>Added: {selectedResource?.created_at && new Date(selectedResource.created_at).toLocaleDateString()}</span>
           </div>
         </div>

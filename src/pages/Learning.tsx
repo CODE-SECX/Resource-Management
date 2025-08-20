@@ -230,6 +230,15 @@ export function Learning() {
     return matchesSearch && matchesCategories && matchesTags && matchesDifficulty;
   });
 
+  const [learningItems, setLearningItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const truncateContent = (content: string, maxLength = 150) => {
+    if (content.length <= maxLength) return content;
+    return content.substr(0, maxLength) + '...';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -421,11 +430,10 @@ export function Learning() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL *
+                  URL
                 </label>
                 <input
                   type="url"
-                  required
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
@@ -532,10 +540,11 @@ export function Learning() {
       <Modal
         isOpen={!!selectedResource}
         onClose={() => setSelectedResource(null)}
-        title={selectedResource?.title || ''}
+        title=""
         size="xl"
       >
         <div className="space-y-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">{selectedResource?.title}</h1>
           <div className="prose prose-lg max-w-none">
             <div dangerouslySetInnerHTML={{ __html: selectedResource?.description || '' }} />
           </div>
@@ -565,9 +574,15 @@ export function Learning() {
               className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : item.id)}
             >
-              <div className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'}`}>
+              <div 
+                className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'} cursor-pointer`}
+                onClick={() => {
+                  setSelectedResource(item);
+                  setIsModalOpen(true);
+                }}
+              >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 flex-1 mr-2">
+                  <h3 className="text-xl font-bold text-gray-900 flex-1 mr-2">
                     {item.title}
                   </h3>
                   <div className="flex items-center space-x-1 flex-shrink-0">
@@ -602,9 +617,7 @@ export function Learning() {
 
                 {item.description && (
                   <div 
-                    className={`text-gray-600 text-sm mb-3 prose prose-sm max-w-none ${
-                      !isGridLayout && !isExpanded ? 'line-clamp-2' : ''
-                    }`}
+                    className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none line-clamp-3"
                     dangerouslySetInnerHTML={{ __html: item.description }}
                   />
                 )}

@@ -13,7 +13,7 @@ export function ResourceIndex() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const allTags = Array.from(new Set(resources.flatMap(item => item.tags || [])));
   const [selectedItem, setSelectedItem] = useState<Resource | null>(null);
 
@@ -99,16 +99,16 @@ export function ResourceIndex() {
       {/* Sidebar */}
       <div className={`${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-64 bg-gray-50 border-r border-gray-200 p-4 space-y-6 transform transition-transform duration-200 ease-in-out`}>
+      } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-64 bg-gray-800 border-r border-gray-700 p-4 space-y-6 transform transition-transform duration-200 ease-in-out`}>
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Categories</h2>
+          <h2 className="text-lg font-semibold text-gray-100 mb-3">Categories</h2>
           <div className="grid grid-cols-2 gap-1">
             <button
               onClick={() => setSelectedCategories([])}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
                 selectedCategories.length === 0
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700'
               }`}
             >
               All Categories
@@ -125,8 +125,8 @@ export function ResourceIndex() {
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
                   selectedCategories.includes(category.id)
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 {category.name}
@@ -137,7 +137,7 @@ export function ResourceIndex() {
 
         {/* Tags Section */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Tags</h2>
+          <h2 className="text-lg font-semibold text-gray-100 mb-3">Tags</h2>
           <div className="grid grid-cols-2 gap-1">
             {allTags.map((tag) => (
               <button
@@ -151,26 +151,26 @@ export function ResourceIndex() {
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
                   selectedTags.includes(tag)
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 {tag}
               </button>
             ))}
             {allTags.length === 0 && (
-              <p className="text-sm text-gray-500 px-3">No tags available</p>
+              <p className="text-sm text-gray-400 px-3">No tags available</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-gray-900">
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Resources</h1>
-            <p className="mt-2 text-gray-600">Browse resources by category</p>
+            <h1 className="text-3xl font-bold text-gray-100">Resources</h1>
+            <p className="mt-2 text-gray-400">Browse resources by category</p>
           </div>
 
           {/* Search */}
@@ -182,7 +182,7 @@ export function ResourceIndex() {
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                className="w-full pl-10 pr-4 py-3 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-800 text-gray-100"
               />
             </div>
           </div>
@@ -193,12 +193,12 @@ export function ResourceIndex() {
               <div
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
-                className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <h3 className="text-lg font-semibold text-gray-100">{item.title}</h3>
+                    <p className="mt-1 text-sm text-gray-400">
                       {item.categories?.map(cat => cat.name).join(', ')}
                     </p>
                   </div>
@@ -209,8 +209,8 @@ export function ResourceIndex() {
             {filteredResources.length === 0 && (
               <div className="text-center py-12">
                 <Search className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-4 text-lg font-medium text-gray-900">No resources found</h3>
-                <p className="mt-2 text-gray-500">Try adjusting your search or filters</p>
+                <h3 className="mt-4 text-lg font-medium text-gray-100">No resources found</h3>
+                <p className="mt-2 text-gray-400">Try adjusting your search or filters</p>
               </div>
             )}
           </div>
@@ -225,9 +225,9 @@ export function ResourceIndex() {
         size="xl"
       >
         {selectedItem && (
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-gray-900 mb-6">{selectedItem.title}</h1>
-            
+          <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
+            <h1 className="text-4xl font-bold text-gray-100 mb-6">{selectedItem.title}</h1>
+
             <div className="flex items-center gap-4 mb-6">
               {selectedItem.categories?.map(cat => (
                 <span
@@ -240,7 +240,7 @@ export function ResourceIndex() {
               ))}
             </div>
 
-            <div className="prose prose-lg max-w-none">
+            <div className="prose prose-lg max-w-none text-gray-300">
               <div dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
             </div>
 

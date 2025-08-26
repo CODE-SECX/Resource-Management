@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import React, { useEffect } from 'react';
+import { ExternalLink } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -44,20 +45,22 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
         </div>
 
-        <div 
-          className={`${sizeClasses[size]} relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 w-full`}
+        <div
+          className={`${sizeClasses[size]} relative transform overflow-hidden rounded-xl bg-gray-800 text-left shadow-2xl transition-all sm:my-8 w-full border border-gray-700`}
         >
-          <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">{title}</h3>
+          <div className="bg-gray-800 px-6 pb-6 pt-6">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-semibold leading-6 text-gray-100">{title}</h3>
               <button
                 onClick={onClose}
-                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="rounded-lg bg-gray-700/50 text-gray-400 hover:text-gray-200 hover:bg-gray-700 p-1.5 transition-all duration-200"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-4">{children}</div>
+            <div className="animate-fade-in-up">
+              {children}
+            </div>
           </div>
         </div>
       </div>

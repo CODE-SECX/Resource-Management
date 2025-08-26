@@ -156,39 +156,39 @@ export default function Dashboard() {
       description: 'Create new resource',
       icon: BookOpen,
       href: '/resources?action=new',
-      color: 'border-blue-300 hover:border-blue-400 hover:bg-blue-50',
-      iconColor: 'text-blue-600',
-      textColor: 'text-blue-900',
-      descColor: 'text-blue-700',
+      color: 'border-blue-600/30 hover:border-blue-500 hover:bg-blue-600/10',
+      iconColor: 'text-blue-400',
+      textColor: 'text-gray-100',
+      descColor: 'text-gray-400',
     },
     {
       title: 'Add Learning',
       description: 'Track your progress',
       icon: GraduationCap,
       href: '/learning?action=new',
-      color: 'border-emerald-300 hover:border-emerald-400 hover:bg-emerald-50',
-      iconColor: 'text-emerald-600',
-      textColor: 'text-emerald-900',
-      descColor: 'text-emerald-700',
+      color: 'border-emerald-600/30 hover:border-emerald-500 hover:bg-emerald-600/10',
+      iconColor: 'text-emerald-400',
+      textColor: 'text-gray-100',
+      descColor: 'text-gray-400',
     },
     {
       title: 'Add Category',
       description: 'Organize content',
       icon: Tag,
       href: '/categories?action=new',
-      color: 'border-purple-300 hover:border-purple-400 hover:bg-purple-50',
-      iconColor: 'text-purple-600',
-      textColor: 'text-purple-900',
-      descColor: 'text-purple-700',
+      color: 'border-purple-600/30 hover:border-purple-500 hover:bg-purple-600/10',
+      iconColor: 'text-purple-400',
+      textColor: 'text-gray-100',
+      descColor: 'text-gray-400',
     },
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-700 border-t-blue-500"></div>
+          <p className="text-gray-400">Loading your dashboard...</p>
         </div>
       </div>
     );

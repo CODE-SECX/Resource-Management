@@ -4,9 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { useSearchParams } from 'react-router-dom';
-import { Modal } from '../components/Modal';
-
+import { useSearchParams, Link } from 'react-router-dom';
 export function Resources() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,8 +26,6 @@ export function Resources() {
     tags: '',
     categoryIds: [] as string[],
   });
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -202,10 +198,10 @@ export function Resources() {
   const filteredResources = resources.filter(resource => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategories = selectedCategories.length === 0 ||
                              resource.categories?.some(cat => selectedCategories.includes(cat.id));
-    
+
     const matchesTags = selectedTags.length === 0 ||
                        selectedTags.some(tag => resource.tags.includes(tag));
 
@@ -230,12 +226,12 @@ export function Resources() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container-wide space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Resources</h1>
-          <p className="text-gray-600 mt-1">Manage your resource collection</p>
+          <h1 className="text-3xl font-bold text-gray-50 mb-2">Resource Library</h1>
+          <p className="text-gray-300">Organize and access your comprehensive resource collection</p>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0">
           <button
@@ -270,7 +266,7 @@ export function Resources() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
+      <div className="bg-gray-800 rounded-lg p-6 mb-6 space-y-4">
         <div className="flex items-center space-x-4">
           <div className="flex-1">
             <div className="relative">
@@ -280,20 +276,20 @@ export function Resources() {
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                className="pl-10 pr-4 py-2 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
               />
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-600">Filters:</span>
+            <Filter className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-300">Filters:</span>
           </div>
         </div>
 
         {/* Category filters */}
         {categories.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Categories</h4>
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Categories</h4>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
               {categories.map((category) => (
                 <button
@@ -308,7 +304,7 @@ export function Resources() {
                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedCategories.includes(category.id)
                       ? 'text-white'
-                      : 'text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
                   }`}
                   style={{
                     backgroundColor: selectedCategories.includes(category.id) ? category.color : undefined,
@@ -326,30 +322,30 @@ export function Resources() {
 
         {/* Date Range Filter */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Date Range</h4>
+          <h4 className="text-sm font-medium text-gray-300 mb-2">Date Range</h4>
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <label className="block text-xs text-gray-600 mb-1">From</label>
+              <label className="block text-xs text-gray-400 mb-1">From</label>
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-600 mb-1">To</label>
+              <label className="block text-xs text-gray-400 mb-1">To</label>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
               />
             </div>
             {(dateRange.start || dateRange.end) && (
               <button
                 onClick={() => setDateRange({ start: '', end: '' })}
-                className="mt-5 p-2 text-gray-500 hover:text-red-600 transition-colors"
+                className="mt-5 p-2 text-gray-400 hover:text-red-400 transition-colors"
                 title="Clear date filter"
               >
                 <X className="w-4 h-4" />
@@ -361,7 +357,7 @@ export function Resources() {
         {/* Tag filters */}
         {allTags.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Tags</h4>
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Tags</h4>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
               {allTags.map((tag) => (
                 <button
@@ -375,11 +371,11 @@ export function Resources() {
                   }}
                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedTags.includes(tag)
-                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                      : 'text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-indigo-600 text-white border border-indigo-500'
+                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
                   }`}
                 >
-                  <Tag className="mr-1 w-3 h-3" />
+                  <Tag className="w-3 h-3 mr-1" />
                   {tag}
                   {selectedTags.includes(tag) && (
                     <X className="ml-1 w-3 h-3" />
@@ -394,15 +390,15 @@ export function Resources() {
       {/* Resource Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 bg-gray-50/50">
-              <h2 className="text-lg font-semibold">
+          <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+            <div className="p-6 border-b border-gray-700 bg-gray-900/50">
+              <h2 className="text-lg font-semibold text-gray-100">
                 {editingResource ? 'Edit Resource' : 'Add New Resource'}
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Title *
                 </label>
                 <input
@@ -410,24 +406,24 @@ export function Resources() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   URL 
                 </label>
                 <input
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Description
                 </label>
                 <RichTextEditor
@@ -437,7 +433,7 @@ export function Resources() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Tags (comma separated)
                 </label>
                 <input
@@ -445,16 +441,16 @@ export function Resources() {
                   value={formData.tags}
                   onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
                   placeholder="javascript, react, tutorial"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                 />
               </div>
 
               {categories.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Categories
                   </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
                     {categories.map((category) => (
                       <label key={category.id} className="flex items-center">
                         <input
@@ -470,7 +466,7 @@ export function Resources() {
                           }}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
-                        <span className="ml-2 text-sm text-gray-900">{category.name}</span>
+                        <span className="ml-2 text-sm text-gray-200">{category.name}</span>
                         <div 
                           className="ml-2 w-3 h-3 rounded-full"
                           style={{ backgroundColor: category.color }}
@@ -488,7 +484,7 @@ export function Resources() {
                     setShowForm(false);
                     setEditingResource(null);
                   }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -505,24 +501,21 @@ export function Resources() {
       )}
 
       {/* Resources Grid/List View */}
-      <div className={isGridLayout ? "grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+      <div className={isGridLayout ? "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredResources.map((resource) => {
           const isExpanded = expandedItemId === resource.id;
           return (
             <div 
               key={resource.id} 
-              className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
+              className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
-              <div 
-                className={`${isGridLayout ? 'p-4 sm:p-6' : 'p-4'} cursor-pointer`}
-                onClick={() => {
-                  setSelectedResource(resource);
-                  setIsModalOpen(true);
-                }}
+              <Link 
+                to={`/resources/${resource.id}`}
+                className="p-6 block hover:bg-gray-750 transition-colors"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 flex-1 mr-2">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-50 flex-1 mr-3">
                     {resource.title}
                   </h3>
                   <div className="flex items-center space-x-1 flex-shrink-0">
@@ -549,7 +542,7 @@ export function Resources() {
 
                 {resource.description && (
                   <div 
-                    className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none line-clamp-3"
+                    className="text-gray-300 text-sm mb-3 line-clamp-3"
                     dangerouslySetInnerHTML={{ __html: resource.description }}
                   />
                 )}
@@ -575,7 +568,7 @@ export function Resources() {
                     {resource.tags.map((tag, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full"
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-700 text-gray-200 rounded-full"
                       >
                         <Tag className="w-3 h-3 mr-1" />
                         {tag}
@@ -599,7 +592,7 @@ export function Resources() {
                     {new Date(resource.created_at).toLocaleDateString()}
                   </span>
                 </div>
-              </div>
+              </Link>
             </div>
           );
         })}
@@ -607,10 +600,10 @@ export function Resources() {
 
       {filteredResources.length === 0 && (
         <div className="text-center py-12">
-          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gray-800 rounded-full flex items-center justify-center mb-4">
             <Search className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-100 mb-2">
             {resources.length === 0 ? 'No resources yet' : 'No matching resources'}
           </h3>
           <p className="text-gray-500 mb-4">
@@ -630,39 +623,7 @@ export function Resources() {
         </div>
       )}
 
-      {/* Resource Details Modal */}
-      <Modal
-        isOpen={!!selectedResource}
-        onClose={() => setSelectedResource(null)}
-        title=""
-        size="lg"
-      >
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">{selectedResource?.title}</h1>
-          <div 
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: selectedResource?.description || '' }}
-          />
-          
-          {selectedResource?.url && (
-            <div className="mt-4">
-              <a
-                href={selectedResource.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                Visit Resource
-              </a>
-            </div>
-          )}
-          
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-            <span>Category: {selectedResource?.categories?.map(cat => cat.name).join(', ')}</span>
-            <span>Added: {selectedResource?.created_at && new Date(selectedResource.created_at).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </Modal>
+      
     </div>
   );
 }

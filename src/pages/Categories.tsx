@@ -242,7 +242,7 @@ export function Categories() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                   placeholder="Enter category name"
                 />
               </div>
@@ -255,7 +255,7 @@ export function Categories() {
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                   placeholder="Optional description"
                 />
               </div>
@@ -364,7 +364,7 @@ export function Categories() {
                     <span className="text-gray-600">Total Items</span>
                     <span className="font-semibold text-gray-900">{totalItems}</span>
                   </div>
-                  
+
                   {(categoryStats.resources > 0 || categoryStats.learning > 0) && (
                     <div className="space-y-2">
                       {categoryStats.resources > 0 && (
@@ -376,7 +376,7 @@ export function Categories() {
                           <span className="font-medium text-blue-700">{categoryStats.resources}</span>
                         </div>
                       )}
-                      
+
                       {categoryStats.learning > 0 && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-green-600 flex items-center">

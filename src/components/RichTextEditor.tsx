@@ -9,7 +9,7 @@ interface RichTextEditorProps {
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   return (
     <Editor
-      tinymceScriptSrc="/tinymce/tinymce.min.js"
+      tinymceScriptSrc="https://cdn.tiny.cloud/1/no17idvqooop2hz590huxkpthgsoutf3f5kb89qobgl0dkfl/tinymce/6/tinymce.min.js"
       apiKey="no17idvqooop2hz590huxkpthgsoutf3f5kb89qobgl0dkfl"
       value={value}
       onEditorChange={(content) => onChange(content)}

@@ -1,297 +1,491 @@
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { supabase, type Learning, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { AuthForm } from '../components/AuthForm';
+import { Search, GraduationCap, Menu, X, ExternalLink, Calendar, Tag, Filter } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import { 
-  BookOpen, 
-  GraduationCap, 
-  Star, 
-  Users, 
-  Zap, 
-  Shield,
-  ChevronRight,
-  Play,
-  Check
-} from 'lucide-react';
+
+const difficultyLevels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
 export function Index() {
   const { user } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [learning, setLearning] = useState<Learning[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const allTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
+  const [selectedItem, setSelectedItem] = useState<Learning | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleAuthClick = (mode: 'signin' | 'signup') => {
-    setAuthMode(mode);
-    setShowAuthModal(true);
+  useEffect(() => {
+    fetchLearning();
+    fetchCategories();
+  }, [user]);
+
+  const fetchLearning = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('learning')
+        .select(`
+          *,
+          learning_categories(
+            category_id,
+            categories(*)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const learningWithCategories = data?.map(item => ({
+        ...item,
+        categories: item.learning_categories.map((lc: any) => lc.categories),
+      })) || [];
+
+      setLearning(learningWithCategories);
+    } catch (error) {
+      console.error('Error fetching learning:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const features = [
-    {
-      icon: BookOpen,
-      title: 'Resource Management',
-      description: 'Organize and access your learning resources with intelligent categorization and search.',
-      gradient: 'from-blue-500 to-cyan-500'
-    },
-    {
-      icon: GraduationCap,
-      title: 'Progress Tracking',
-      description: 'Monitor your learning journey with detailed analytics and milestone tracking.',
-      gradient: 'from-emerald-500 to-teal-500'
-    },
-    {
-      icon: Star,
-      title: 'Smart Recommendations',
-      description: 'Get personalized content suggestions based on your learning patterns and goals.',
-      gradient: 'from-purple-500 to-pink-500'
-    },
-    {
-      icon: Users,
-      title: 'Collaborative Learning',
-      description: 'Share resources and learn together with built-in collaboration tools.',
-      gradient: 'from-orange-500 to-red-500'
+  const fetchCategories = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
-  ];
+  };
 
-  const stats = [
-    { number: '10K+', label: 'Active Learners' },
-    { number: '50K+', label: 'Resources Shared' },
-    { number: '1M+', label: 'Learning Hours' },
-    { number: '99%', label: 'User Satisfaction' }
-  ];
+  const filteredLearning = learning.filter(item => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategories.length === 0 || 
+                          item.categories?.some(cat => selectedCategories.includes(cat.id));
+    const matchesDifficulty = selectedDifficulties.length === 0 || 
+                             selectedDifficulties.includes(item.difficulty_level);
+    const matchesTags = selectedTags.length === 0 ||
+                       selectedTags.some(tag => item.tags?.includes(tag));
 
-  const benefits = [
-    'Unlimited resource storage and organization',
-    'Advanced search and filtering capabilities',
-    'Progress tracking and analytics dashboard',
-    'Collaborative learning tools and sharing',
-    'Mobile-responsive design for learning anywhere',
-    'Secure data encryption and privacy protection'
-  ];
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesTags;
+  });
+
+  const getDifficultyColor = (level: string) => {
+    switch (level) {
+      case 'Beginner': return 'bg-emerald-900/30 text-emerald-300 border-emerald-700/50';
+      case 'Intermediate': return 'bg-blue-900/30 text-blue-300 border-blue-700/50';
+      case 'Advanced': return 'bg-amber-900/30 text-amber-300 border-amber-700/50';
+      case 'Expert': return 'bg-red-900/30 text-red-300 border-red-700/50';
+      default: return 'bg-slate-800/50 text-slate-300 border-slate-600/50';
+    }
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedDifficulties([]);
+    setSelectedTags([]);
+    setSearchQuery('');
+  };
+
+  const activeFiltersCount = selectedCategories.length + selectedDifficulties.length + selectedTags.length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-900">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-700 border-t-indigo-500"></div>
+          <p className="text-slate-400 font-medium">Loading your learning resources...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center space-x-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                ResourceHub
-              </span>
-            </Link>
-            
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <Link to="/dashboard" className="btn-primary">
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleAuthClick('signin')}
-                    className="btn-ghost"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => handleAuthClick('signup')}
-                    className="btn-primary"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-900">
+      {/* Mobile Filter Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 right-4 z-50 p-3 rounded-xl bg-slate-800 shadow-xl border border-slate-700 hover:bg-slate-700 transition-colors"
+      >
+        <div className="flex items-center space-x-2">
+          <Filter className="w-5 h-5 text-slate-300" />
+          {activeFiltersCount > 0 && (
+            <span className="bg-indigo-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+              {activeFiltersCount}
+            </span>
+          )}
         </div>
-      </nav>
+      </button>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-8 animate-fade-in-up">
-              Your Learning
-              <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-indigo-400 bg-clip-text text-transparent block">
-                Journey Starts Here
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-400 max-w-4xl mx-auto mb-12 leading-relaxed animate-fade-in-up" style={{'--stagger': 1} as any}>
-              Organize, track, and optimize your learning with our comprehensive resource management platform. 
-              Built for modern learners who demand efficiency and results.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{'--stagger': 2} as any}>
-              {!user && (
-                <>
-                  <button
-                    onClick={() => handleAuthClick('signup')}
-                    className="btn-primary text-lg px-8 py-4 group"
-                  >
-                    Start Learning Free
-                    <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
-                  </button>
-                  <button className="btn-secondary text-lg px-8 py-4 group">
-                    <Play className="w-5 h-5 mr-2" />
-                    Watch Demo
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
-            {stats.map((stat, index) => (
-              <div key={stat.label} className="text-center animate-fade-in-up" style={{'--stagger': index} as any}>
-                <div className="text-3xl md:text-4xl font-bold text-white mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-gray-400">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="section-title animate-fade-in-up">
-              Everything You Need to Excel
-            </h2>
-            <p className="section-subtitle animate-fade-in-up" style={{'--stagger': 1} as any}>
-              Powerful features designed to accelerate your learning journey and maximize your potential.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className="card card-hover p-8 text-center group animate-fade-in-up"
-                  style={{'--stagger': index} as any}
-                >
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-4">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-400 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-800/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="animate-fade-in-up">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
-                Why Choose ResourceHub?
-              </h2>
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <div key={benefit} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mt-0.5">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                    <p className="text-gray-300 leading-relaxed">{benefit}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="relative animate-fade-in-up" style={{'--stagger': 1} as any}>
-              <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-2xl p-8 border border-gray-700">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
-                    <h4 className="text-lg font-semibold text-white mb-2">Lightning Fast</h4>
-                    <p className="text-gray-400 text-sm">Optimized performance for seamless learning</p>
-                  </div>
-                  <div className="text-center">
-                    <Shield className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-                    <h4 className="text-lg font-semibold text-white mb-2">Secure & Private</h4>
-                    <p className="text-gray-400 text-sm">Your data is protected with enterprise-grade security</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-3xl p-12 border border-gray-700">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 animate-fade-in-up">
-              Ready to Transform Your Learning?
-            </h2>
-            <p className="text-xl text-gray-400 mb-8 animate-fade-in-up" style={{'--stagger': 1} as any}>
-              Join thousands of learners who have already revolutionized their educational journey.
-            </p>
-            {!user && (
+      <div className="flex">
+        {/* Sidebar */}
+        <div className={`${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-80 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out overflow-y-auto`}>
+          
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-slate-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-100">Filters</h2>
               <button
-                onClick={() => handleAuthClick('signup')}
-                className="btn-primary text-lg px-8 py-4 group animate-fade-in-up"
-                style={{'--stagger': 2} as any}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-700 text-slate-300"
               >
-                Start Your Free Journey
-                <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              >
+                Clear all filters ({activeFiltersCount})
               </button>
             )}
           </div>
-        </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-800/50 border-t border-gray-700 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <Link to="/" className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
+          <div className="p-6 space-y-8">
+            {/* Categories Filter */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Categories</h3>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <label key={category.id} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(category.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCategories(prev => [...prev, category.id]);
+                        } else {
+                          setSelectedCategories(prev => prev.filter(id => id !== category.id));
+                        }
+                      }}
+                      className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className="w-3 h-3 rounded-full ring-1 ring-slate-600"
+                        style={{ backgroundColor: category.color || '#64748B' }}
+                      ></div>
+                      <span className="text-sm text-slate-300 group-hover:text-slate-100 font-medium transition-colors">
+                        {category.name}
+                      </span>
+                    </div>
+                  </label>
+                ))}
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                ResourceHub
-              </span>
-            </Link>
-            
-            <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} ResourceHub. Empowering learners worldwide.
-            </p>
+            </div>
+
+            {/* Difficulty Filter */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Difficulty Level</h3>
+              <div className="space-y-2">
+                {difficultyLevels.slice(1).map((level) => (
+                  <label key={level} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedDifficulties.includes(level)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDifficulties(prev => [...prev, level]);
+                        } else {
+                          setSelectedDifficulties(prev => prev.filter(l => l !== level));
+                        }
+                      }}
+                      className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                    />
+                    <span className={`text-sm px-2 py-1 rounded-md border font-medium ${getDifficultyColor(level)}`}>
+                      {level}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags Filter */}
+            {allTags.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Tags</h3>
+                <div className="space-y-2">
+                  {allTags.map((tag) => (
+                    <label key={tag} className="flex items-center space-x-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.includes(tag)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTags(prev => [...prev, tag]);
+                          } else {
+                            setSelectedTags(prev => prev.filter(t => t !== tag));
+                          }
+                        }}
+                        className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                      />
+                      <span className="text-sm text-slate-300 group-hover:text-slate-100 font-medium flex items-center transition-colors">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {tag}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </footer>
 
-      {/* Auth Modal */}
-      <Modal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        title={authMode === 'signin' ? 'Sign In to Your Account' : 'Create Your Account'}
-        size="md"
-      >
-        <AuthForm
-          mode={authMode}
-          onModeChange={setAuthMode}
-          onSuccess={() => setShowAuthModal(false)}
+        {/* Main Content */}
+        <div className="flex-1 lg:ml-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-slate-100 mb-2">Learning Resources</h1>
+              <p className="text-lg text-slate-400">
+                Discover and explore your curated learning materials
+              </p>
+            </div>
+
+            {/* Search Bar */}
+            <div className="mb-8">
+              <div className="relative max-w-2xl">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search resources by title or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 text-lg border border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-800 text-slate-100 placeholder-slate-500 shadow-lg"
+                />
+              </div>
+            </div>
+
+            {/* Results Counter */}
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-slate-400">
+                {filteredLearning.length} resource{filteredLearning.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+
+            {/* Learning Resources List */}
+            <div className="space-y-4">
+              {filteredLearning.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedItem(item)}
+                  className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start gap-6">
+                      {/* Main Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-xl font-semibold text-slate-100 group-hover:text-indigo-400 transition-colors leading-tight">
+                            {item.title}
+                          </h3>
+                          <div className="flex items-center gap-3 ml-4 shrink-0">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getDifficultyColor(item.difficulty_level)}`}>
+                              <GraduationCap className="w-4 h-4 mr-1.5" />
+                              {item.difficulty_level}
+                            </span>
+                            {item.url && (
+                              <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                                <ExternalLink className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        {item.description && (
+                          <p className="text-slate-300 text-base mb-4 leading-relaxed">
+                            {item.description.replace(/<[^>]*>/g, '').substring(0, 200)}
+                            {item.description.length > 200 && '...'}
+                          </p>
+                        )}
+
+                        {/* Categories and Tags Row */}
+                        <div className="flex items-center flex-wrap gap-3 mb-4">
+                          {/* Categories */}
+                          {item.categories && item.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {item.categories.slice(0, 3).map((category) => (
+                                <span
+                                  key={category.id}
+                                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm"
+                                  style={{ backgroundColor: category.color || '#64748B' }}
+                                >
+                                  {category.name}
+                                </span>
+                              ))}
+                              {item.categories.length > 3 && (
+                                <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-400 bg-slate-700 rounded-lg">
+                                  +{item.categories.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Tags */}
+                          {item.tags && item.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {item.tags.slice(0, 4).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/60 rounded-md border border-slate-600/50"
+                                >
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {tag}
+                                </span>
+                              ))}
+                              {item.tags.length > 4 && (
+                                <span className="text-xs text-slate-500 px-2 py-1">
+                                  +{item.tags.length - 4} more tags
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer Info */}
+                        <div className="flex items-center text-sm text-slate-500">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Added on {new Date(item.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {filteredLearning.length === 0 && (
+              <div className="text-center py-16">
+                <div className="mx-auto w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 border border-slate-700">
+                  <GraduationCap className="w-12 h-12 text-slate-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-100 mb-2">No resources found</h3>
+                <p className="text-slate-400 mb-6 max-w-md mx-auto">
+                  {searchQuery || activeFiltersCount > 0
+                    ? "Try adjusting your search query or filters to find more resources."
+                    : "Start by adding some learning resources to see them here."}
+                </p>
+                {(searchQuery || activeFiltersCount > 0) && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
         />
+      )}
+
+      {/* Item Detail Modal */}
+      <Modal
+        isOpen={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+        title=""
+        size="xl"
+      >
+        {selectedItem && (
+          <div className="space-y-6 bg-slate-800 text-slate-100 p-6 rounded-xl">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-100 mb-4">{selectedItem.title}</h1>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border ${getDifficultyColor(selectedItem.difficulty_level)}`}>
+                  <GraduationCap className="w-4 h-4 mr-2" />
+                  {selectedItem.difficulty_level}
+                </span>
+                
+                {selectedItem.categories?.map(cat => (
+                  <span
+                    key={cat.id}
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm"
+                    style={{ backgroundColor: cat.color }}
+                  >
+                    {cat.name}
+                  </span>
+                ))}
+              </div>
+
+              {selectedItem.tags && selectedItem.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {selectedItem.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/50 rounded-md border border-slate-600/50"
+                    >
+                      <Tag className="w-3 h-3 mr-1" />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedItem.description && (
+              <div className="prose prose-lg prose-invert max-w-none">
+                <div dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
+              </div>
+            )}
+
+            {selectedItem.url && (
+              <div className="pt-4 border-t border-slate-700">
+                <a
+                  href={selectedItem.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Visit External Resource
+                </a>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-700 text-sm text-slate-400">
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                Added on {new Date(selectedItem.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

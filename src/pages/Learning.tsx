@@ -30,6 +30,7 @@ export function Learning() {
     difficulty_level: 'Beginner' as Learning['difficulty_level'],
     categoryIds: [] as string[],
   });
+  const [selectedFormTags, setSelectedFormTags] = useState<string[]>([]);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -107,11 +108,16 @@ export function Learning() {
     if (!user) return;
 
     try {
+      const inputNewTags = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      const mergedTags = Array.from(new Set([...
+        selectedFormTags,
+        ...inputNewTags
+      ]));
       const learningData = {
         title: formData.title,
         description: formData.description,
         url: formData.url,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        tags: mergedTags,
         difficulty_level: formData.difficulty_level,
         user_id: user.id,
       };
@@ -168,6 +174,7 @@ export function Learning() {
         difficulty_level: 'Beginner',
         categoryIds: [],
       });
+      setSelectedFormTags([]);
       setShowForm(false);
       setEditingItem(null);
       fetchLearning();
@@ -183,10 +190,11 @@ export function Learning() {
       title: item.title,
       description: item.description,
       url: item.url,
-      tags: item.tags.join(', '),
+      tags: '',
       difficulty_level: item.difficulty_level,
       categoryIds: item.categories?.map(cat => cat.id) || [],
     });
+    setSelectedFormTags(item.tags);
     setShowForm(true);
   };
 
@@ -517,9 +525,39 @@ export function Learning() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Tags (comma separated)
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Tags
                 </label>
+                {allTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {allTags.map((tag) => {
+                      const active = selectedFormTags.includes(tag);
+                      return (
+                        <button
+                          type="button"
+                          key={tag}
+                          aria-pressed={active}
+                          onClick={() => {
+                            setSelectedFormTags(prev => (
+                              active ? prev.filter(t => t !== tag) : [...prev, tag]
+                            ));
+                          }}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                            active
+                              ? 'bg-indigo-600 text-white border-indigo-500'
+                              : 'text-gray-300 border-gray-600 hover:bg-gray-700'
+                          }`}
+                        >
+                          {tag}
+                          {active && (
+                            <X className="ml-1 w-3 h-3" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <label className="block text-xs text-gray-400 mb-1">Add new tags (comma separated)</label>
                 <input
                   type="text"
                   value={formData.tags}
@@ -601,9 +639,9 @@ export function Learning() {
                 className="p-6 block hover:bg-gray-750 transition-colors"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-50 flex-1 mr-3">
+                  <h2 className="text-2xl font-semibold text-gray-50 flex-1 mr-3">
                     {item.title}
-                  </h3>
+                  </h2>
                   <div className="flex items-center space-x-1 flex-shrink-0">
                     <button
                       onClick={(e) => {

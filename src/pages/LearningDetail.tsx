@@ -53,10 +53,17 @@ export function LearningDetail() {
     if (!learning || !confirm('Are you sure you want to delete this learning item?')) return;
 
     try {
+      // Clean up junction table first
+      await supabase
+        .from('learning_categories')
+        .delete()
+        .eq('learning_id', learning.id);
+
       const { error } = await supabase
         .from('learning')
         .delete()
-        .eq('id', learning.id);
+        .eq('id', learning.id)
+        .eq('user_id', user!.id);
 
       if (error) throw error;
       toast.success('Learning item deleted successfully!');
@@ -118,7 +125,7 @@ export function LearningDetail() {
           
           <div className="flex items-center space-x-2">
             <Link
-              to={`/learning/edit/${learning.id}`}
+              to={`/learning?action=edit&id=${learning.id}`}
               className="p-2 text-gray-400 hover:text-indigo-400 rounded-lg hover:bg-gray-800 transition-colors"
             >
               <Edit2 className="w-5 h-5" />

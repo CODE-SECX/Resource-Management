@@ -53,10 +53,17 @@ export function ResourceDetail() {
     if (!resource || !confirm('Are you sure you want to delete this resource?')) return;
 
     try {
+      // Clean up junction table first
+      await supabase
+        .from('resource_categories')
+        .delete()
+        .eq('resource_id', resource.id);
+
       const { error } = await supabase
         .from('resources')
         .delete()
-        .eq('id', resource.id);
+        .eq('id', resource.id)
+        .eq('user_id', user!.id);
 
       if (error) throw error;
       toast.success('Resource deleted successfully!');
@@ -108,7 +115,7 @@ export function ResourceDetail() {
           
           <div className="flex items-center space-x-2">
             <Link
-              to={`/resources/edit/${resource.id}`}
+              to={`/resources?action=edit&id=${resource.id}`}
               className="p-2 text-gray-400 hover:text-indigo-400 rounded-lg hover:bg-gray-800 transition-colors"
             >
               <Edit2 className="w-5 h-5" />

@@ -31,7 +31,9 @@ export function Layout({ children }: LayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Resources', href: '/resources', icon: BookOpen },
+    { name: 'Resource Index', href: '/resources/index', icon: BookOpen },
     { name: 'Learning', href: '/learning', icon: GraduationCap },
+    { name: 'Learning Index', href: '/learning/index', icon: GraduationCap },
     { name: 'Categories', href: '/categories', icon: Settings },
   ];
 

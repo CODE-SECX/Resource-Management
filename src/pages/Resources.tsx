@@ -29,11 +29,20 @@ export function Resources() {
 
   // Check if we should open the form automatically
   useEffect(() => {
-    if (searchParams.get('action') === 'new') {
+    const action = searchParams.get('action');
+    const id = searchParams.get('id');
+    if (action === 'new') {
       setShowForm(true);
       setSearchParams({}); // Clear the URL parameter
     }
-  }, [searchParams, setSearchParams]);
+    if (action === 'edit' && id) {
+      const res = resources.find(r => r.id === id);
+      if (res) {
+        handleEdit(res);
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, setSearchParams, resources]);
 
   useEffect(() => {
     fetchResources();
@@ -105,11 +114,12 @@ export function Resources() {
       let resourceId;
 
       if (editingResource) {
-        // Update existing resource
+        // Update existing resource (scope by user for RLS)
         const { error } = await supabase
           .from('resources')
           .update(resourceData)
-          .eq('id', editingResource.id);
+          .eq('id', editingResource.id)
+          .eq('user_id', user.id);
 
         if (error) throw error;
         resourceId = editingResource.id;
@@ -127,7 +137,7 @@ export function Resources() {
         toast.success('Resource created successfully!');
       }
 
-      // Update categories
+      // Update categories (delete existing first to avoid duplicates)
       await supabase
         .from('resource_categories')
         .delete()
@@ -177,10 +187,17 @@ export function Resources() {
     if (!confirm('Are you sure you want to delete this resource?')) return;
 
     try {
+      // Clean up junction table first to satisfy FK constraints
+      await supabase
+        .from('resource_categories')
+        .delete()
+        .eq('resource_id', id);
+
       const { error } = await supabase
         .from('resources')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user!.id);
 
       if (error) throw error;
       toast.success('Resource deleted successfully!');
@@ -212,10 +229,7 @@ export function Resources() {
     return matchesSearch && matchesCategories && matchesTags && matchesDate;
   });
 
-  const truncateContent = (content: string, maxLength = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substr(0, maxLength) + '...';
-  };
+  
 
   if (loading) {
     return (

@@ -119,7 +119,7 @@ export function Index() {
       {/* Mobile Filter Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-3 rounded-xl bg-slate-800 shadow-xl border border-slate-700 hover:bg-slate-700 transition-colors"
+        className="lg:hidden fixed bottom-6 right-4 z-40 p-3 rounded-xl bg-slate-800 shadow-xl border border-slate-700 hover:bg-slate-700 transition-colors"
       >
         <div className="flex items-center space-x-2">
           <Filter className="w-5 h-5 text-slate-300" />

@@ -27,17 +27,26 @@ export function Learning() {
     description: '',
     url: '',
     tags: '',
-    difficulty_level: 'Beginner' as const,
+    difficulty_level: 'Beginner' as Learning['difficulty_level'],
     categoryIds: [] as string[],
   });
 
   // Check if we should open the form automatically
   useEffect(() => {
-    if (searchParams.get('action') === 'new') {
+    const action = searchParams.get('action');
+    const id = searchParams.get('id');
+    if (action === 'new') {
       setShowForm(true);
       setSearchParams({}); // Clear the URL parameter
     }
-  }, [searchParams, setSearchParams]);
+    if (action === 'edit' && id) {
+      const item = learning.find(l => l.id === id);
+      if (item) {
+        handleEdit(item);
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, setSearchParams, learning]);
 
   useEffect(() => {
     fetchLearning();
@@ -110,11 +119,12 @@ export function Learning() {
       let learningId;
 
       if (editingItem) {
-        // Update existing item
+        // Update existing item (scope by user for RLS)
         const { error } = await supabase
           .from('learning')
           .update(learningData)
-          .eq('id', editingItem.id);
+          .eq('id', editingItem.id)
+          .eq('user_id', user.id);
 
         if (error) throw error;
         learningId = editingItem.id;
@@ -132,7 +142,7 @@ export function Learning() {
         toast.success('Learning item created successfully!');
       }
 
-      // Update categories
+      // Update categories (delete existing first)
       await supabase
         .from('learning_categories')
         .delete()
@@ -184,10 +194,17 @@ export function Learning() {
     if (!confirm('Are you sure you want to delete this learning item?')) return;
 
     try {
+      // Clean up junction table first
+      await supabase
+        .from('learning_categories')
+        .delete()
+        .eq('learning_id', id);
+
       const { error } = await supabase
         .from('learning')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user!.id);
 
       if (error) throw error;
       toast.success('Learning item deleted successfully!');
@@ -234,10 +251,7 @@ export function Learning() {
 
   
 
-  const truncateContent = (content: string, maxLength = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substr(0, maxLength) + '...';
-  };
+  
 
   if (loading) {
     return (

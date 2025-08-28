@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, type Resource } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -102,7 +102,7 @@ export function ResourceDetail() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header with back button */}
         <div className="flex items-center justify-between mb-8">
           <Link
@@ -130,9 +130,9 @@ export function ResourceDetail() {
         </div>
 
         {/* Main Content */}
-        <article className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 max-w-none">
+        <article className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
           {/* Article Header */}
-          <header className="p-8 lg:p-12 border-b border-gray-700">
+          <header className="p-8 lg:p-10 border-b border-gray-700">
             <h1 className="text-4xl font-bold text-gray-50 mb-6 leading-tight">
               {resource.title}
             </h1>
@@ -181,10 +181,10 @@ export function ResourceDetail() {
           </header>
 
           {/* Article Content */}
-          <div className="p-8 lg:p-12">
-            <div className="prose prose-invert prose-lg lg:prose-xl max-w-none">
+          <div className="p-8 lg:p-10">
+            <div className="prose prose-invert prose-slate prose-lg max-w-none mx-auto prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-8 prose-headings:mb-3 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg">
               <div 
-                className="text-gray-100 leading-relaxed"
+                className="text-gray-100"
                 dangerouslySetInnerHTML={{ __html: resource.description || '' }}
               />
             </div>

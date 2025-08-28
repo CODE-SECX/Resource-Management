@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, type Learning, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, GraduationCap, Menu, X, ExternalLink, Calendar, Tag, Filter } from 'lucide-react';
+import { Search, GraduationCap, X, ExternalLink, Calendar, Tag, Filter } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 const difficultyLevels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
@@ -455,7 +455,7 @@ export function Index() {
             </div>
 
             {selectedItem.description && (
-              <div className="prose prose-lg prose-invert max-w-none">
+              <div className="prose prose-invert prose-slate prose-lg max-w-none mx-auto prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-2">
                 <div dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
               </div>
             )}

@@ -181,6 +181,7 @@ export function Layout({ children }: LayoutProps) {
                 )}
               </div>
 
+
               {/* User menu */}
               {user && (
                 <div className="flex items-center space-x-3">
@@ -212,6 +213,76 @@ export function Layout({ children }: LayoutProps) {
         {/* Collapsible menu (all screens, full-width dropdown) */}
         <div className={`${isMobileMenuOpen ? '' : 'hidden'}`}>
           <div className="px-4 pt-2 pb-4 space-y-2 bg-gray-800/50 border-t border-gray-700 z-40">
+            {/* Mobile Search */}
+            <div className="relative sm:hidden">
+              <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-indigo-500">
+                <Search className="w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchOpen(true);
+                  }}
+                  onFocus={() => setSearchOpen(true)}
+                  placeholder="Search resources & learning..."
+                  className="bg-transparent text-sm text-gray-200 placeholder:text-gray-500 px-2 py-1.5 w-full focus:outline-none"
+                />
+              </div>
+              {searchOpen && (searchQuery || isSearching) && (
+                <div className="absolute left-0 right-0 mt-2 w-full max-h-96 overflow-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                  <div className="p-2 border-b border-gray-700 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Search results</span>
+                    <button className="text-xs text-gray-400 hover:text-gray-200" onClick={() => setSearchOpen(false)}>Close</button>
+                  </div>
+                  {isSearching && (
+                    <div className="p-4 text-sm text-gray-400">Searching...</div>
+                  )}
+                  {!isSearching && (
+                    <div className="p-2 space-y-3">
+                      <div>
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-400">Resources</div>
+                        {searchResults.resources.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-gray-500">No matches</div>
+                        )}
+                        {searchResults.resources.map((r) => (
+                          <Link
+                            key={r.id}
+                            to={`/resources/${r.id}`}
+                            onClick={() => setSearchOpen(false)}
+                            className="block px-3 py-2 rounded-md hover:bg-gray-700"
+                          >
+                            <div className="text-gray-200 text-sm font-medium line-clamp-1">{r.title}</div>
+                            {r.url && (
+                              <div className="text-xs text-indigo-400 line-clamp-1">{r.url}</div>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                      <div>
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-400">Learning</div>
+                        {searchResults.learning.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-gray-500">No matches</div>
+                        )}
+                        {searchResults.learning.map((l) => (
+                          <Link
+                            key={l.id}
+                            to={`/learning/${l.id}`}
+                            onClick={() => setSearchOpen(false)}
+                            className="block px-3 py-2 rounded-md hover:bg-gray-700"
+                          >
+                            <div className="text-gray-200 text-sm font-medium line-clamp-1">{l.title}</div>
+                            {l.url && (
+                              <div className="text-xs text-indigo-400 line-clamp-1">{l.url}</div>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {navigation.map((item) => {
               const Icon = item.icon;
               return (

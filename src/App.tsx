@@ -11,10 +11,12 @@ import { Index } from './pages/Index';
 import { ResourceIndex } from './pages/ResourceIndex';
 import { ResourceDetail } from './pages/ResourceDetail';
 import { LearningDetail } from './pages/LearningDetail';
+import PublicLearning from './pages/PublicLearning';
+import PublicResource from './pages/PublicResource';
 import { Toaster } from 'react-hot-toast';
 
 // ProtectedRoute component is assumed to be defined elsewhere and handles authentication logic
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -67,12 +69,26 @@ function AppRoutes() {
   );
 }
 
+// Public routes for shared content (no authentication required)
+function PublicRoutes() {
+  return (
+    <Routes>
+      <Route path="/learning/:token" element={<PublicLearning />} />
+      <Route path="/resource/:token" element={<PublicResource />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <div className="min-h-screen bg-gray-900">
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <Routes>
+            <Route path="/share/*" element={<PublicRoutes />} />
+            <Route path="/*" element={<AppRoutes />} />
+          </Routes>
           <Toaster position="top-right" />
         </AuthProvider>
       </BrowserRouter>

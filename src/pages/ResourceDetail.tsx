@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase, type Resource } from '../lib/supabase';
+import { supabase, type Resource, createShareToken } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, ExternalLink, Edit2, Trash2, Tag, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Edit2, Trash2, Tag, Calendar, FileText, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function ResourceDetail() {
@@ -11,6 +11,8 @@ export function ResourceDetail() {
   const { user } = useAuth();
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareLink, setShareLink] = useState<string>('');
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     fetchResource();
@@ -74,6 +76,34 @@ export function ResourceDetail() {
     }
   };
 
+  const handleShare = async () => {
+    if (!resource || !user) return;
+
+    try {
+      const shareToken = await createShareToken('resource', resource.id, user.id);
+      const shareUrl = `${window.location.origin}/share/resource/${shareToken.token}`;
+      setShareLink(shareUrl);
+      toast.success('Share link created successfully!');
+    } catch (error) {
+      console.error('Error creating share link:', error);
+      toast.error('Failed to create share link');
+    }
+  };
+
+  const copyToClipboard = async () => {
+    if (!shareLink) return;
+
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setIsCopied(true);
+      toast.success('Link copied to clipboard!');
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast.error('Failed to copy link');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -121,6 +151,13 @@ export function ResourceDetail() {
               <Edit2 className="w-5 h-5" />
             </Link>
             <button
+              onClick={handleShare}
+              className="p-2 text-gray-400 hover:text-green-400 rounded-lg hover:bg-gray-800 transition-colors"
+              title="Share this resource"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            <button
               onClick={handleDelete}
               className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-800 transition-colors"
             >
@@ -128,6 +165,41 @@ export function ResourceDetail() {
             </button>
           </div>
         </div>
+
+        {/* Share Link Modal */}
+        {shareLink && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-100 mb-4">Share Resource</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Anyone with this link can view this resource without logging in.
+              </p>
+              <div className="flex items-center space-x-2 mb-6">
+                <input
+                  type="text"
+                  value={shareLink}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={copyToClipboard}
+                  className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  title={isCopied ? 'Copied!' : 'Copy link'}
+                >
+                  {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                </button>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShareLink('')}
+                  className="px-4 py-2 text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <article className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">

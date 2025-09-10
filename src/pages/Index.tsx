@@ -170,7 +170,7 @@ export function Index() {
         {/* Sidebar */}
         <div className={`${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-80 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out overflow-y-auto`}>
+        } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-96 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out overflow-y-auto`}>
           
           {/* Sidebar Header */}
           <div className="p-6 border-b border-slate-700">
@@ -197,9 +197,9 @@ export function Index() {
             {/* Categories Filter */}
             <div>
               <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Categories</h3>
-              <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
                 {categories.map((category) => (
-                  <label key={category.id} className="flex items-center space-x-3 cursor-pointer group">
+                  <label key={category.id} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedCategories.includes(category.id)}
@@ -210,14 +210,14 @@ export function Index() {
                           setSelectedCategories(prev => prev.filter(id => id !== category.id));
                         }
                       }}
-                      className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                      className="h-3 w-3 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
                     />
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1.5">
                       <div
-                        className="w-3 h-3 rounded-full ring-1 ring-slate-600"
+                        className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: category.color || '#64748B' }}
                       ></div>
-                      <span className="text-sm text-slate-300 group-hover:text-slate-100 font-medium transition-colors">
+                      <span className="text-xs text-slate-300 font-medium">
                         {category.name}
                       </span>
                     </div>
@@ -229,9 +229,9 @@ export function Index() {
             {/* Difficulty Filter */}
             <div>
               <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Difficulty Level</h3>
-              <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
                 {difficultyLevels.slice(1).map((level) => (
-                  <label key={level} className="flex items-center space-x-3 cursor-pointer group">
+                  <label key={level} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedDifficulties.includes(level)}
@@ -242,9 +242,9 @@ export function Index() {
                           setSelectedDifficulties(prev => prev.filter(l => l !== level));
                         }
                       }}
-                      className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                      className="h-3 w-3 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
                     />
-                    <span className={`text-sm px-2 py-1 rounded-md border font-medium ${getDifficultyColor(level)}`}>
+                    <span className={`text-xs px-2 py-1 rounded-md border font-medium ${getDifficultyColor(level)}`}>
                       {level}
                     </span>
                   </label>
@@ -256,9 +256,9 @@ export function Index() {
             {filteredTags.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Tags</h3>
-                <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
                   {filteredTags.map((tag) => (
-                    <label key={tag} className="flex items-center space-x-3 cursor-pointer group">
+                    <label key={tag} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
                       <input
                         type="checkbox"
                         checked={selectedTags.includes(tag)}
@@ -269,10 +269,10 @@ export function Index() {
                             setSelectedTags(prev => prev.filter(t => t !== tag));
                           }
                         }}
-                        className="h-4 w-4 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
+                        className="h-3 w-3 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
                       />
-                      <span className="text-sm text-slate-300 group-hover:text-slate-100 font-medium flex items-center transition-colors">
-                        <Tag className="w-3 h-3 mr-1" />
+                      <span className="text-xs text-slate-300 font-medium flex items-center">
+                        <Tag className="w-2.5 h-2.5 mr-1" />
                         {tag}
                       </span>
                     </label>
@@ -284,8 +284,8 @@ export function Index() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 lg:ml-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 lg:ml-0 min-w-0">
+          <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-4xl font-bold text-slate-100 mb-2">Learning Resources</h1>
@@ -296,7 +296,7 @@ export function Index() {
 
             {/* Search Bar */}
             <div className="mb-8">
-              <div className="relative max-w-2xl">
+              <div className="relative max-w-4xl">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input
                   type="text"

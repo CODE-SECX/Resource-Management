@@ -16,7 +16,20 @@ export function Index() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Get all tags from learning items
   const allTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
+  
+  // Get filtered tags based on selected categories
+  const filteredTags = selectedCategories.length === 0 
+    ? allTags
+    : Array.from(new Set(
+        learning
+          .filter(item => 
+            selectedCategories.length === 0 || 
+            item.categories?.some(cat => selectedCategories.includes(cat.id))
+          )
+          .flatMap(item => item.tags || [])
+      ));
   const [selectedItem, setSelectedItem] = useState<Learning | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -240,11 +253,11 @@ export function Index() {
             </div>
 
             {/* Tags Filter */}
-            {allTags.length > 0 && (
+            {filteredTags.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Tags</h3>
                 <div className="space-y-2">
-                  {allTags.map((tag) => (
+                  {filteredTags.map((tag) => (
                     <label key={tag} className="flex items-center space-x-3 cursor-pointer group">
                       <input
                         type="checkbox"

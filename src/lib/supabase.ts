@@ -475,6 +475,42 @@ export async function getPayloadTags(userId: string): Promise<string[]> {
   return Array.from(tags).sort();
 }
 
+export async function getPayloadSubcategoriesByCategory(userId: string, category: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('subcategories')
+    .eq('user_id', userId)
+    .eq('category', category);
+
+  if (error) throw error;
+  
+  // Get unique subcategories for the specific category
+  const subcategories = new Set<string>();
+  data?.forEach(item => {
+    item.subcategories?.forEach((sub: string) => subcategories.add(sub));
+  });
+  
+  return Array.from(subcategories).sort();
+}
+
+export async function getPayloadTagsByCategory(userId: string, category: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('tags')
+    .eq('user_id', userId)
+    .eq('category', category);
+
+  if (error) throw error;
+  
+  // Get unique tags for the specific category
+  const tags = new Set<string>();
+  data?.forEach(item => {
+    item.tags?.forEach((tag: string) => tags.add(tag));
+  });
+  
+  return Array.from(tags).sort();
+}
+
 function generateRandomToken(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let token = '';

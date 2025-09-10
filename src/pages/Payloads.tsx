@@ -10,6 +10,8 @@ import {
   getPayloadCategories,
   getPayloadSubcategories,
   getPayloadTags,
+  getPayloadSubcategoriesByCategory,
+  getPayloadTagsByCategory,
   deletePayload
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,53 +20,22 @@ import {
   Filter, 
   Plus, 
   Star, 
-  Copy, 
   Trash2, 
-  Edit3, 
-  Target, 
-  Shield, 
-  Zap, 
+  X,
+  Eye,
+  Target,
   AlertTriangle,
-  CheckCircle,
-  Clock,
   TrendingUp,
-  Tag,
-  Folder,
-  X
+  Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const severityColors = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-  info: 'bg-gray-500 text-white'
-};
-
-const severityIcons = {
-  critical: AlertTriangle,
-  high: Shield,
-  medium: Target,
-  low: CheckCircle,
-  info: Clock
-};
-
-const targetTypeIcons = {
-  web: Target,
-  api: Zap,
-  mobile: Shield,
-  network: TrendingUp,
-  other: Folder
-};
 
 export function Payloads() {
   const { user } = useAuth();
   const [payloads, setPayloads] = useState<Payload[]>([]);
   const [stats, setStats] = useState<PayloadStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedPayload, setSelectedPayload] = useState<string | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,8 +50,12 @@ export function Payloads() {
   
   // Available options
   const [categories, setCategories] = useState<string[]>([]);
-  const [subcategories, setSubcategories] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [allSubcategories, setAllSubcategories] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  
+  // Filtered options based on selected category
+  const [filteredSubcategories, setFilteredSubcategories] = useState<string[]>([]);
+  const [filteredTags, setFilteredTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -89,6 +64,16 @@ export function Payloads() {
       fetchFilterOptions();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && selectedCategory) {
+      fetchFilteredOptions();
+    } else {
+      // Reset to all options when no category is selected
+      setFilteredSubcategories(allSubcategories);
+      setFilteredTags(allTags);
+    }
+  }, [selectedCategory, user]);
 
   useEffect(() => {
     if (user) {
@@ -148,10 +133,30 @@ export function Payloads() {
       ]);
       
       setCategories(cats);
-      setSubcategories(subs);
-      setTags(ts);
+      setAllSubcategories(subs);
+      setAllTags(ts);
+      
+      // Initialize filtered options
+      setFilteredSubcategories(subs);
+      setFilteredTags(ts);
     } catch (error) {
       console.error('Error fetching filter options:', error);
+    }
+  };
+
+  const fetchFilteredOptions = async () => {
+    if (!user || !selectedCategory) return;
+    
+    try {
+      const [filteredSubs, filteredTs] = await Promise.all([
+        getPayloadSubcategoriesByCategory(user.id, selectedCategory),
+        getPayloadTagsByCategory(user.id, selectedCategory)
+      ]);
+      
+      setFilteredSubcategories(filteredSubs);
+      setFilteredTags(filteredTs);
+    } catch (error) {
+      console.error('Error fetching filtered options:', error);
     }
   };
 
@@ -179,14 +184,36 @@ export function Payloads() {
     }
   };
 
+  const handleCopyAllPayloads = async () => {
+    if (payloads.length === 0) {
+      toast.error('No payloads to copy');
+      return;
+    }
+
+    try {
+      // Format payloads as a list suitable for testing tools like Burp Suite
+      const payloadList = payloads.map(payload => payload.payload).join('\n');
+      
+      await navigator.clipboard.writeText(payloadList);
+      toast.success(`Copied ${payloads.length} payloads to clipboard`);
+    } catch (error) {
+      console.error('Error copying all payloads:', error);
+      toast.error('Failed to copy payloads');
+    }
+  };
+
   const handleToggleFavorite = async (payload: Payload) => {
     try {
-      const updated = await supabase
+      const { data: updated, error } = await supabase
         .from('payloads')
         .update({ is_favorite: !payload.is_favorite })
         .eq('id', payload.id)
         .select()
         .single();
+
+      if (error) {
+        throw error;
+      }
 
       setPayloads(payloads.map(p => 
         p.id === payload.id ? updated : p
@@ -208,17 +235,11 @@ export function Payloads() {
     setSelectedSeverity([]);
     setSelectedTargetType([]);
     setFavoritesOnly(false);
+    // Reset filtered options to show all
+    setFilteredSubcategories(allSubcategories);
+    setFilteredTags(allTags);
   };
 
-  const getSeverityIcon = (severity: string) => {
-    const Icon = severityIcons[severity as keyof typeof severityIcons] || AlertTriangle;
-    return <Icon className="w-4 h-4" />;
-  };
-
-  const getTargetTypeIcon = (targetType: string) => {
-    const Icon = targetTypeIcons[targetType as keyof typeof targetTypeIcons] || Target;
-    return <Icon className="w-4 h-4" />;
-  };
 
   if (loading) {
     return (
@@ -230,324 +251,387 @@ export function Payloads() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-full sm:max-w-full md:max-w-full lg:max-w-7xl xl:max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-100 mb-2">Payload Arsenal</h1>
-            <p className="text-gray-400">Manage your bug bounty payloads with smart filtering and quick access</p>
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-80 h-screen bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto">
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-gray-700">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Filter className="w-4 h-4 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-100">Filters</h2>
+            </div>
+            
+            {/* Clear Filters Button */}
+            {(selectedCategory || selectedSubcategories.length > 0 || selectedTags.length > 0 || 
+              selectedSeverity.length > 0 || selectedTargetType.length > 0 || favoritesOnly || searchTerm) && (
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-all duration-200 text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+              >
+                <X className="w-3 h-3" />
+                <span>Clear all filters</span>
+              </button>
+            )}
           </div>
-          <Link
-            to="/payloads/create"
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Payload
-          </Link>
-        </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Payloads</p>
-                  <p className="text-2xl font-bold text-gray-100">{stats.total_payloads}</p>
-                </div>
-                <Target className="w-8 h-8 text-indigo-500" />
+          <div className="p-6 space-y-6">
+            {/* Search */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-400 to-blue-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Search</h3>
               </div>
-            </div>
-            
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Favorites</p>
-                  <p className="text-2xl font-bold text-gray-100">{stats.favorite_payloads}</p>
-                </div>
-                <Star className="w-8 h-8 text-yellow-500" />
-              </div>
-            </div>
-            
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Critical/High</p>
-                  <p className="text-2xl font-bold text-gray-100">{stats.critical_payloads + stats.high_payloads}</p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-red-500" />
-              </div>
-            </div>
-            
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Most Used</p>
-                  <p className="text-2xl font-bold text-gray-100">{stats.max_usage_count}</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-500" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search and Filters */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 mb-6">
-          <div className="p-4">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="flex-1 relative">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search payloads, descriptions, tags..."
+                  placeholder="Search payloads..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 />
               </div>
-              
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-                {(selectedCategory || selectedSubcategories.length > 0 || selectedTags.length > 0 || 
-                  selectedSeverity.length > 0 || selectedTargetType.length > 0 || favoritesOnly) && (
-                  <span className="ml-2 px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">
-                    {[
-                      selectedCategory && 1,
-                      selectedSubcategories.length,
-                      selectedTags.length,
-                      selectedSeverity.length,
-                      selectedTargetType.length,
-                      favoritesOnly && 1
-                    ].filter(Boolean).reduce((a, b) => a + b, 0)}
-                  </span>
-                )}
-              </button>
-              
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="created_at">Date Created</option>
-                <option value="updated_at">Last Updated</option>
-                <option value="usage_count">Usage Count</option>
-                <option value="title">Title</option>
-                <option value="severity">Severity</option>
-              </select>
-              
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as any)}
-                className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
             </div>
 
-            {/* Advanced Filters */}
-            {showFilters && (
-              <div className="border-t border-gray-700 pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">All Categories</option>
-                      {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                  </div>
+            {/* Category Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-green-400 to-green-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Category</h3>
+              </div>
+              <div className="space-y-2">
+                {categories.map((category: string) => (
+                  <label key={category} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-600 hover:border-indigo-500/50 hover:bg-gray-700 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="category"
+                      checked={selectedCategory === category}
+                      onChange={() => setSelectedCategory(selectedCategory === category ? '' : category)}
+                      className="h-3 w-3 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-gray-700"
+                    />
+                    <span className="text-xs text-gray-300 font-medium">{category}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Severity</label>
-                    <div className="space-y-2">
-                      {['critical', 'high', 'medium', 'low', 'info'].map(severity => (
-                        <label key={severity} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedSeverity.includes(severity)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedSeverity([...selectedSeverity, severity]);
-                              } else {
-                                setSelectedSeverity(selectedSeverity.filter(s => s !== severity));
-                              }
-                            }}
-                            className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span className="text-gray-300 capitalize">{severity}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+            {/* Subcategories Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+                  Subcategories {selectedCategory && `(for ${selectedCategory})`}
+                </h3>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-1 border border-gray-600 rounded-lg p-2 bg-gray-700">
+                {filteredSubcategories.length > 0 ? (
+                  filteredSubcategories.map(subcategory => (
+                    <label key={subcategory} className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedSubcategories.includes(subcategory)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedSubcategories([...selectedSubcategories, subcategory]);
+                          } else {
+                            setSelectedSubcategories(selectedSubcategories.filter(s => s !== subcategory));
+                          }
+                        }}
+                        className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-300">{subcategory}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm italic">
+                    {selectedCategory ? 'No subcategories found' : 'Select a category to see subcategories'}
+                  </p>
+                )}
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Target Type</label>
-                    <div className="space-y-2">
-                      {['web', 'api', 'mobile', 'network', 'other'].map(type => (
-                        <label key={type} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedTargetType.includes(type)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedTargetType([...selectedTargetType, type]);
-                              } else {
-                                setSelectedTargetType(selectedTargetType.filter(t => t !== type));
-                              }
-                            }}
-                            className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span className="text-gray-300 capitalize">{type}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+            {/* Tags Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-purple-400 to-purple-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+                  Tags {selectedCategory && `(for ${selectedCategory})`}
+                </h3>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-1 border border-gray-600 rounded-lg p-2 bg-gray-700">
+                {filteredTags.length > 0 ? (
+                  filteredTags.map(tag => (
+                    <label key={tag} className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.includes(tag)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTags([...selectedTags, tag]);
+                          } else {
+                            setSelectedTags(selectedTags.filter(t => t !== tag));
+                          }
+                        }}
+                        className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-300">{tag}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm italic">
+                    {selectedCategory ? 'No tags found' : 'Select a category to see tags'}
+                  </p>
+                )}
+              </div>
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center">
+            {/* Severity Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-red-400 to-red-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Severity</h3>
+              </div>
+              <div className="space-y-2">
+                {['critical', 'high', 'medium', 'low', 'info'].map(severity => (
+                  <label key={severity} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-600 hover:border-indigo-500/50 hover:bg-gray-700 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
-                      checked={favoritesOnly}
-                      onChange={(e) => setFavoritesOnly(e.target.checked)}
-                      className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      checked={selectedSeverity.includes(severity)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSeverity([...selectedSeverity, severity]);
+                        } else {
+                          setSelectedSeverity(selectedSeverity.filter(s => s !== severity));
+                        }
+                      }}
+                      className="h-3 w-3 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-gray-700"
                     />
-                    <span className="text-gray-300">Show favorites only</span>
+                    <span className="text-xs text-gray-300 font-medium capitalize">{severity}</span>
                   </label>
-                  
-                  <button
-                    onClick={clearFilters}
-                    className="flex items-center px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Clear Filters
-                  </button>
-                </div>
+                ))}
               </div>
-            )}
+            </div>
+
+            {/* Target Type Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-cyan-400 to-cyan-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Target Type</h3>
+              </div>
+              <div className="space-y-2">
+                {['web', 'api', 'mobile', 'network', 'other'].map(type => (
+                  <label key={type} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-600 hover:border-indigo-500/50 hover:bg-gray-700 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedTargetType.includes(type)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedTargetType([...selectedTargetType, type]);
+                        } else {
+                          setSelectedTargetType(selectedTargetType.filter(t => t !== type));
+                        }
+                      }}
+                      className="h-3 w-3 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-gray-700"
+                    />
+                    <span className="text-xs text-gray-300 font-medium capitalize">{type}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Favorites Filter */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600"></div>
+                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Options</h3>
+              </div>
+              <label className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-600 hover:border-indigo-500/50 hover:bg-gray-700 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={favoritesOnly}
+                  onChange={(e) => setFavoritesOnly(e.target.checked)}
+                  className="h-3 w-3 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-gray-700"
+                />
+                <span className="text-xs text-gray-300 font-medium">Show favorites only</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* Payloads List */}
-        <div className="space-y-4">
-          {payloads.length === 0 ? (
-            <div className="text-center py-12">
-              <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-100 mb-2">No payloads found</h3>
-              <p className="text-gray-400 mb-6">Start building your payload arsenal by creating your first payload</p>
-              <Link
-                to="/payloads?action=create"
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Payload
-              </Link>
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          <div className="p-8 max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-100 mb-2">Payload Arsenal</h1>
+                <p className="text-gray-400">Manage your bug bounty payloads with smart filtering and quick access</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleCopyAllPayloads}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  title="Copy all filtered payloads"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy All
+                </button>
+                <Link
+                  to="/payloads/create"
+                  className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Payload
+                </Link>
+              </div>
             </div>
-          ) : (
-            payloads.map((payload) => (
-              <div key={payload.id} className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors">
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-100">{payload.title}</h3>
-                        <button
-                          onClick={() => handleToggleFavorite(payload)}
-                          className={`p-1 rounded-full transition-colors ${
-                            payload.is_favorite ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
-                          }`}
-                        >
-                          <Star className={`w-4 h-4 ${payload.is_favorite ? 'fill-current' : ''}`} />
-                        </button>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${severityColors[payload.severity]}`}>
-                          {getSeverityIcon(payload.severity)}
-                          <span className="ml-1 capitalize">{payload.severity}</span>
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
-                          {getTargetTypeIcon(payload.target_type)}
-                          <span className="ml-1 capitalize">{payload.target_type}</span>
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-400 text-sm mb-3">{payload.description}</p>
-                      
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <span className="flex items-center">
-                          <Folder className="w-3 h-3 mr-1" />
-                          {payload.category}
-                        </span>
-                        {payload.subcategories.length > 0 && (
-                          <span className="flex items-center">
-                            <Tag className="w-3 h-3 mr-1" />
-                            {payload.subcategories.slice(0, 2).join(', ')}
-                            {payload.subcategories.length > 2 && ` +${payload.subcategories.length - 2}`}
-                          </span>
-                        )}
-                        <span className="flex items-center">
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          Used {payload.usage_count} times
-                        </span>
-                      </div>
+
+            {/* Stats Cards */}
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-sm">Total Payloads</p>
+                      <p className="text-2xl font-bold text-gray-100">{stats.total_payloads}</p>
                     </div>
-                    
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => handleCopyPayload(payload.payload)}
-                        className="p-2 text-gray-400 hover:text-green-400 rounded-lg hover:bg-gray-700 transition-colors"
-                        title="Copy payload"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <Link
-                        to={`/payloads/${payload.id}`}
-                        className="p-2 text-gray-400 hover:text-blue-400 rounded-lg hover:bg-gray-700 transition-colors"
-                        title="View details"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(payload.id)}
-                        className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors"
-                        title="Delete payload"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <Target className="w-8 h-8 text-indigo-500" />
                   </div>
-                  
-                  {/* Payload Preview */}
-                  <div className="bg-gray-900 rounded-lg p-3 font-mono text-sm text-gray-300 overflow-x-auto">
-                    <code>{payload.payload.substring(0, 150)}{payload.payload.length > 150 ? '...' : ''}</code>
-                  </div>
-                  
-                  {/* Tags */}
-                  {payload.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {payload.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300"
-                        >
-                          <Tag className="w-2 h-2 mr-1" />
-                          {tag}
-                        </span>
-                      ))}
+                </div>
+            
+                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-sm">Favorites</p>
+                      <p className="text-2xl font-bold text-gray-100">{stats.favorite_payloads}</p>
                     </div>
-                  )}
+                    <Star className="w-8 h-8 text-yellow-500" />
+                  </div>
+                </div>
+            
+                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-sm">Critical/High</p>
+                      <p className="text-2xl font-bold text-gray-100">{stats.critical_payloads + stats.high_payloads}</p>
+                    </div>
+                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                  </div>
+                </div>
+            
+                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-sm">Most Used</p>
+                      <p className="text-2xl font-bold text-gray-100">{stats.max_usage_count}</p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-green-500" />
+                  </div>
                 </div>
               </div>
-            ))
-          )}
+            )}
+
+            {/* Results Counter */}
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-gray-400">
+                {payloads.length} payload{payloads.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+
+            {/* Sort Options */}
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="created_at">Date Created</option>
+                  <option value="updated_at">Last Updated</option>
+                  <option value="usage_count">Usage Count</option>
+                  <option value="title">Title</option>
+                  <option value="severity">Severity</option>
+                </select>
+                
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Payloads List */}
+            <div className="space-y-4">
+              {payloads.length === 0 ? (
+                <div className="text-center py-12">
+                  <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-100 mb-2">No payloads found</h3>
+                  <p className="text-gray-400 mb-6">Start building your payload arsenal by creating your first payload</p>
+                  <Link
+                    to="/payloads?action=create"
+                    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Payload
+                  </Link>
+                </div>
+              ) : (
+                payloads.map((payload) => (
+                  <div key={payload.id} className="bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors">
+                    <div className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          {/* Clickable Payload */}
+                          <div 
+                            onClick={() => handleCopyPayload(payload.payload)}
+                            className="cursor-pointer"
+                            title="Click to copy payload"
+                          >
+                            <div className="bg-gray-900 rounded-lg p-3 font-mono text-sm text-gray-300 hover:bg-gray-850 transition-colors">
+                              <code className="break-all">{payload.payload}</code>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex items-center space-x-1 ml-4">
+                          <button
+                            onClick={() => handleToggleFavorite(payload)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              payload.is_favorite ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                            }`}
+                            title={payload.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <Star className={`w-4 h-4 ${payload.is_favorite ? 'fill-current' : ''}`} />
+                          </button>
+                          <Link
+                            to={`/payloads/${payload.id}`}
+                            className="p-2 text-gray-400 hover:text-blue-400 rounded-lg hover:bg-gray-700 transition-colors"
+                            title="View details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(payload.id)}
+                            className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors"
+                            title="Delete payload"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

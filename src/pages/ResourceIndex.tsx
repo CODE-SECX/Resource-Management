@@ -55,14 +55,35 @@ export function ResourceIndex() {
   const fetchCategories = async () => {
     if (!user) return;
     try {
+      // Fetch only categories that have resource items
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select(`
+          *,
+          resource_categories!inner(
+            resource_id
+          )
+        `)
         .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
-      setCategories(data || []);
+      
+      // Remove duplicates and format data
+      const uniqueCategories = data?.reduce((acc, item) => {
+        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
+          acc.push({
+            id: item.id,
+            name: item.name,
+            color: item.color,
+            user_id: item.user_id,
+            created_at: item.created_at
+          });
+        }
+        return acc;
+      }, [] as Category[]) || [];
+      
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }

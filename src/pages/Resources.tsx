@@ -5,11 +5,13 @@ import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, Grid, Layout
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useSearchParams, Link } from 'react-router-dom';
+
 export function Resources() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [resources, setResources] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -48,6 +50,7 @@ export function Resources() {
   useEffect(() => {
     fetchResources();
     fetchCategories();
+    fetchAllCategoriesForForm();
   }, [user]);
 
   const fetchResources = async () => {
@@ -86,6 +89,44 @@ export function Resources() {
     if (!user) return;
 
     try {
+      // Fetch only categories that have resource items
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          resource_categories!inner(
+            resource_id
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      
+      // Remove duplicates and format data
+      const uniqueCategories = data?.reduce((acc, item) => {
+        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
+          acc.push({
+            id: item.id,
+            name: item.name,
+            color: item.color,
+            user_id: item.user_id,
+            created_at: item.created_at
+          });
+        }
+        return acc;
+      }, [] as Category[]) || [];
+      
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchAllCategoriesForForm = async () => {
+    if (!user) return;
+
+    try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -93,9 +134,9 @@ export function Resources() {
         .order('name');
 
       if (error) throw error;
-      setCategories(data || []);
+      setAllCategories(data || []);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Error fetching all categories:', error);
     }
   };
 
@@ -497,13 +538,13 @@ export function Resources() {
                 />
               </div>
 
-              {categories.length > 0 && (
+              {allCategories.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Categories
                   </label>
                   <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
-                    {categories.map((category) => (
+                    {allCategories.map((category) => (
                       <label key={category.id} className="flex items-center">
                         <input
                           type="checkbox"

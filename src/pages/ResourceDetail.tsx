@@ -102,7 +102,7 @@ export function ResourceDetail() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8">
         {/* Header with back button */}
         <div className="flex items-center justify-between mb-8">
           <Link
@@ -182,7 +182,7 @@ export function ResourceDetail() {
 
           {/* Article Content */}
           <div className="p-8 lg:p-10">
-            <div className="prose prose-invert prose-slate prose-lg max-w-none mx-auto prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-8 prose-headings:mb-3 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg">
+            <div className="prose prose-invert prose-slate prose-lg max-w-full prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-8 prose-headings:mb-3 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg">
               <div 
                 className="text-gray-100"
                 dangerouslySetInnerHTML={{ __html: resource.description || '' }}

@@ -42,11 +42,13 @@ export function Payloads() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedSeverity, setSelectedSeverity] = useState<string[]>([]);
   const [selectedTargetType, setSelectedTargetType] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'created_at' | 'updated_at' | 'usage_count' | 'title' | 'severity'>('created_at');
+  const [sortBy, setSortBy] = useState<'created_at' | 'updated_at' | 'usage_count' | 'title'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Mobile responsive state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Available options
   const [categories, setCategories] = useState<string[]>([]);
@@ -81,7 +83,7 @@ export function Payloads() {
     }
   }, [
     searchTerm, selectedCategory, selectedSubcategories, selectedTags, 
-    selectedSeverity, selectedTargetType, favoritesOnly, sortBy, sortOrder
+    selectedTargetType, favoritesOnly, sortBy, sortOrder
   ]);
 
   const fetchPayloads = async () => {
@@ -94,7 +96,6 @@ export function Payloads() {
         category: selectedCategory || undefined,
         subcategories: selectedSubcategories.length > 0 ? selectedSubcategories : undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
-        severity: selectedSeverity.length > 0 ? selectedSeverity : undefined,
         target_type: selectedTargetType.length > 0 ? selectedTargetType : undefined,
         is_favorite: favoritesOnly || undefined,
         sort_by: sortBy,
@@ -232,7 +233,6 @@ export function Payloads() {
     setSelectedCategory('');
     setSelectedSubcategories([]);
     setSelectedTags([]);
-    setSelectedSeverity([]);
     setSelectedTargetType([]);
     setFavoritesOnly(false);
     // Reset filtered options to show all
@@ -251,21 +251,45 @@ export function Payloads() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="flex">
+      <div className="flex relative">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
-        <div className="w-80 h-screen bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto">
+        <div className={`
+          fixed lg:static inset-y-0 left-0 z-50 lg:z-auto
+          w-80 h-screen bg-gray-800 border-r border-gray-700
+          transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0 transition-transform duration-300 ease-in-out
+          flex-shrink-0 overflow-y-auto
+        `}>
           {/* Sidebar Header */}
           <div className="p-6 border-b border-gray-700">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Filter className="w-4 h-4 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Filter className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-100">Filters</h2>
               </div>
-              <h2 className="text-xl font-bold text-gray-100">Filters</h2>
+              {/* Mobile Close Button */}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                title="Close filters"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
             {/* Clear Filters Button */}
             {(selectedCategory || selectedSubcategories.length > 0 || selectedTags.length > 0 || 
-              selectedSeverity.length > 0 || selectedTargetType.length > 0 || favoritesOnly || searchTerm) && (
+              selectedTargetType.length > 0 || favoritesOnly || searchTerm) && (
               <button
                 onClick={clearFilters}
                 className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-all duration-200 text-sm text-indigo-400 hover:text-indigo-300 font-medium"
@@ -387,33 +411,6 @@ export function Payloads() {
               </div>
             </div>
 
-            {/* Severity Filter */}
-            <div>
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-red-400 to-red-600"></div>
-                <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">Severity</h3>
-              </div>
-              <div className="space-y-2">
-                {['critical', 'high', 'medium', 'low', 'info'].map(severity => (
-                  <label key={severity} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-600 hover:border-indigo-500/50 hover:bg-gray-700 cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedSeverity.includes(severity)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedSeverity([...selectedSeverity, severity]);
-                        } else {
-                          setSelectedSeverity(selectedSeverity.filter(s => s !== severity));
-                        }
-                      }}
-                      className="h-3 w-3 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-gray-700"
-                    />
-                    <span className="text-xs text-gray-300 font-medium capitalize">{severity}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Target Type Filter */}
             <div>
               <div className="flex items-center space-x-2 mb-3">
@@ -462,103 +459,114 @@ export function Payloads() {
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
-          <div className="p-8 max-w-6xl mx-auto">
+          <div className="p-4 lg:p-8 max-w-6xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-100 mb-2">Payload Arsenal</h1>
-                <p className="text-gray-400">Manage your bug bounty payloads with smart filtering and quick access</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 lg:mb-8 gap-4">
+              <div className="flex items-center space-x-4">
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                  title="Toggle filters"
+                >
+                  <Filter className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-100 mb-1 lg:mb-2">Payload Arsenal</h1>
+                  <p className="text-sm lg:text-base text-gray-400">Manage your bug bounty payloads with smart filtering and quick access</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 lg:space-x-3">
                 <button
                   onClick={handleCopyAllPayloads}
-                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="inline-flex items-center px-3 py-2 lg:px-4 lg:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm lg:text-base"
                   title="Copy all filtered payloads"
                 >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy All
+                  <Copy className="w-4 h-4 mr-1 lg:mr-2" />
+                  <span className="hidden sm:inline">Copy All</span>
+                  <span className="sm:hidden">Copy</span>
                 </button>
                 <Link
                   to="/payloads/create"
-                  className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="inline-flex items-center px-3 py-2 lg:px-4 lg:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm lg:text-base"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Payload
+                  <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                  <span className="hidden sm:inline">New Payload</span>
+                  <span className="sm:hidden">New</span>
                 </Link>
               </div>
             </div>
 
             {/* Stats Cards */}
             {stats && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
+                <div className="bg-gray-800 rounded-lg p-4 lg:p-6 border border-gray-700">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-400 text-sm">Total Payloads</p>
-                      <p className="text-2xl font-bold text-gray-100">{stats.total_payloads}</p>
+                      <p className="text-xl lg:text-2xl font-bold text-gray-100">{stats.total_payloads}</p>
                     </div>
-                    <Target className="w-8 h-8 text-indigo-500" />
+                    <Target className="w-6 h-6 lg:w-8 lg:h-8 text-indigo-500" />
                   </div>
                 </div>
             
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div className="bg-gray-800 rounded-lg p-4 lg:p-6 border border-gray-700">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-400 text-sm">Favorites</p>
-                      <p className="text-2xl font-bold text-gray-100">{stats.favorite_payloads}</p>
+                      <p className="text-xl lg:text-2xl font-bold text-gray-100">{stats.favorite_payloads}</p>
                     </div>
-                    <Star className="w-8 h-8 text-yellow-500" />
+                    <Star className="w-6 h-6 lg:w-8 lg:h-8 text-yellow-500" />
                   </div>
                 </div>
             
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div className="bg-gray-800 rounded-lg p-4 lg:p-6 border border-gray-700">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-400 text-sm">Critical/High</p>
-                      <p className="text-2xl font-bold text-gray-100">{stats.critical_payloads + stats.high_payloads}</p>
+                      <p className="text-xl lg:text-2xl font-bold text-gray-100">{stats.critical_payloads + stats.high_payloads}</p>
                     </div>
-                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                    <AlertTriangle className="w-6 h-6 lg:w-8 lg:h-8 text-red-500" />
                   </div>
                 </div>
             
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div className="bg-gray-800 rounded-lg p-4 lg:p-6 border border-gray-700">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-400 text-sm">Most Used</p>
-                      <p className="text-2xl font-bold text-gray-100">{stats.max_usage_count}</p>
+                      <p className="text-xl lg:text-2xl font-bold text-gray-100">{stats.max_usage_count}</p>
                     </div>
-                    <TrendingUp className="w-8 h-8 text-green-500" />
+                    <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 text-green-500" />
                   </div>
                 </div>
               </div>
             )}
 
             {/* Results Counter */}
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-gray-400">
+            <div className="mb-4 lg:mb-6 flex items-center justify-between">
+              <p className="text-gray-400 text-sm lg:text-base">
                 {payloads.length} payload{payloads.length !== 1 ? 's' : ''} found
               </p>
             </div>
 
             {/* Sort Options */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="mb-4 lg:mb-6 flex justify-end">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="px-3 py-2 lg:px-4 lg:py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm lg:text-base"
                 >
                   <option value="created_at">Date Created</option>
                   <option value="updated_at">Last Updated</option>
                   <option value="usage_count">Usage Count</option>
                   <option value="title">Title</option>
-                  <option value="severity">Severity</option>
                 </select>
                 
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as any)}
-                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="px-3 py-2 lg:px-4 lg:py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm lg:text-base"
                 >
                   <option value="desc">Descending</option>
                   <option value="asc">Ascending</option>

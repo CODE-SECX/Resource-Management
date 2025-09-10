@@ -10,7 +10,9 @@ import {
   LogOut, 
   Menu,
   X,
-  Search
+  Search,
+  Target,
+ Zap
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -40,6 +42,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Resource Index', href: '/resources/index', icon: BookOpen },
     { name: 'Learning', href: '/learning', icon: GraduationCap },
     { name: 'Learning Index', href: '/learning/index', icon: GraduationCap },
+    { name: 'Payload Arsenal', href: '/payloads', icon: Target },
     { name: 'Categories', href: '/categories', icon: Settings },
   ];
 

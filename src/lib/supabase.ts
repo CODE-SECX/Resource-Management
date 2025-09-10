@@ -223,6 +223,258 @@ export async function getUserShareTokens(userId: string): Promise<ShareToken[]> 
   return data || [];
 }
 
+// Payload interfaces
+export interface Payload {
+  id: string;
+  user_id: string;
+  title: string;
+  payload: string;
+  description?: string;
+  category: string;
+  subcategories: string[];
+  tags: string[];
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  target_type: 'web' | 'api' | 'mobile' | 'network' | 'other';
+  is_favorite: boolean;
+  is_private: boolean;
+  usage_count: number;
+  last_used_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayloadStats {
+  user_id: string;
+  total_payloads: number;
+  favorite_payloads: number;
+  critical_payloads: number;
+  high_payloads: number;
+  medium_payloads: number;
+  low_payloads: number;
+  info_payloads: number;
+  unique_categories: number;
+  unique_subcategories: number;
+  unique_tags: number;
+  max_usage_count: number;
+  avg_usage_count: number;
+  last_created: string | null;
+}
+
+export interface PayloadFilters {
+  search?: string;
+  category?: string;
+  subcategories?: string[];
+  tags?: string[];
+  severity?: string[];
+  target_type?: string[];
+  is_favorite?: boolean;
+  sort_by?: 'created_at' | 'updated_at' | 'usage_count' | 'title' | 'severity';
+  sort_order?: 'asc' | 'desc';
+}
+
+// Payload API functions
+export async function getPayloads(userId: string, filters?: PayloadFilters): Promise<Payload[]> {
+  let query = supabase
+    .from('payloads')
+    .select('*')
+    .eq('user_id', userId);
+
+  // Apply filters
+  if (filters?.search) {
+    // Use full-text search
+    query = query.textSearch('search_vector', filters.search, {
+      type: 'websearch',
+      config: 'english'
+    });
+  }
+
+  if (filters?.category) {
+    query = query.eq('category', filters.category);
+  }
+
+  if (filters?.subcategories && filters.subcategories.length > 0) {
+    query = query.contains('subcategories', filters.subcategories);
+  }
+
+  if (filters?.tags && filters.tags.length > 0) {
+    query = query.contains('tags', filters.tags);
+  }
+
+  if (filters?.severity && filters.severity.length > 0) {
+    query = query.in('severity', filters.severity);
+  }
+
+  if (filters?.target_type && filters.target_type.length > 0) {
+    query = query.in('target_type', filters.target_type);
+  }
+
+  if (filters?.is_favorite !== undefined) {
+    query = query.eq('is_favorite', filters.is_favorite);
+  }
+
+  // Apply sorting
+  const sortBy = filters?.sort_by || 'created_at';
+  const sortOrder = filters?.sort_order || 'desc';
+  
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getPayload(id: string): Promise<Payload | null> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createPayload(payload: Omit<Payload, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'usage_count'>, userId: string): Promise<Payload> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .insert({
+      ...payload,
+      user_id: userId,
+      usage_count: 0
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePayload(id: string, updates: Partial<Payload>): Promise<Payload> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePayload(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('payloads')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function incrementPayloadUsage(id: string): Promise<void> {
+  // First get current usage count
+  const { data: currentData, error: fetchError } = await supabase
+    .from('payloads')
+    .select('usage_count')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching current usage count:', fetchError);
+    return;
+  }
+
+  // Update with incremented count
+  const { error } = await supabase
+    .from('payloads')
+    .update({ 
+      usage_count: (currentData?.usage_count || 0) + 1,
+      last_used_at: new Date().toISOString()
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error incrementing usage count:', error);
+  }
+}
+
+export async function getPayloadStats(userId: string): Promise<PayloadStats> {
+  const { data, error } = await supabase
+    .from('payload_stats')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error || !data || data.length === 0) {
+    // Return default stats if no data exists
+    return {
+      user_id: userId,
+      total_payloads: 0,
+      favorite_payloads: 0,
+      critical_payloads: 0,
+      high_payloads: 0,
+      medium_payloads: 0,
+      low_payloads: 0,
+      info_payloads: 0,
+      unique_categories: 0,
+      unique_subcategories: 0,
+      unique_tags: 0,
+      max_usage_count: 0,
+      avg_usage_count: 0,
+      last_created: null
+    };
+  }
+  
+  return data[0];
+}
+
+export async function getPayloadCategories(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('category')
+    .eq('user_id', userId)
+    .order('category');
+
+  if (error) throw error;
+  
+  // Get unique categories
+  const categories = [...new Set(data?.map(item => item.category) || [])];
+  return categories;
+}
+
+export async function getPayloadSubcategories(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('subcategories')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  
+  // Get unique subcategories
+  const subcategories = new Set<string>();
+  data?.forEach(item => {
+    item.subcategories?.forEach((sub: string) => subcategories.add(sub));
+  });
+  
+  return Array.from(subcategories).sort();
+}
+
+export async function getPayloadTags(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('payloads')
+    .select('tags')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  
+  // Get unique tags
+  const tags = new Set<string>();
+  data?.forEach(item => {
+    item.tags?.forEach((tag: string) => tags.add(tag));
+  });
+  
+  return Array.from(tags).sort();
+}
+
 function generateRandomToken(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let token = '';

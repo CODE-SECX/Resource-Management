@@ -13,6 +13,9 @@ import { ResourceDetail } from './pages/ResourceDetail';
 import { LearningDetail } from './pages/LearningDetail';
 import PublicLearning from './pages/PublicLearning';
 import PublicResource from './pages/PublicResource';
+import { Payloads } from './pages/Payloads';
+import { PayloadDetail } from './pages/PayloadDetail';
+import { PayloadForm } from './pages/PayloadForm';
 import { Toaster } from 'react-hot-toast';
 
 // ProtectedRoute component is assumed to be defined elsewhere and handles authentication logic
@@ -63,6 +66,10 @@ function AppRoutes() {
         <Route path="/learning/index" element={<Index />} />
         <Route path="/learning/:id" element={<LearningDetail />} />
         <Route path="/categories" element={<Categories />} />
+        <Route path="/payloads" element={<Payloads />} />
+        <Route path="/payloads/:id" element={<PayloadDetail />} />
+        <Route path="/payloads/create" element={<PayloadForm />} />
+        <Route path="/payloads/:id/edit" element={<PayloadForm />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>

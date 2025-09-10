@@ -170,15 +170,20 @@ export function Index() {
         {/* Sidebar */}
         <div className={`${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-40 w-96 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out overflow-y-auto`}>
+        } lg:translate-x-0 fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-96 h-screen lg:h-[calc(100vh-2rem)] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out overflow-y-auto shadow-xl lg:shadow-2xl lg:mr-8`}>
           
           {/* Sidebar Header */}
-          <div className="p-6 border-b border-slate-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-100">Filters</h2>
+          <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-750/50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Filter className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">Filters</h2>
+              </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-700 text-slate-300"
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-700/50 text-slate-300 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -186,9 +191,10 @@ export function Index() {
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
-                className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-600 transition-all duration-200 text-sm text-indigo-400 hover:text-indigo-300 font-medium"
               >
-                Clear all filters ({activeFiltersCount})
+                <X className="w-3 h-3" />
+                <span>Clear all filters ({activeFiltersCount})</span>
               </button>
             )}
           </div>
@@ -196,7 +202,10 @@ export function Index() {
           <div className="p-6 space-y-8">
             {/* Categories Filter */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Categories</h3>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600"></div>
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Categories</h3>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {categories.map((category) => (
                   <label key={category.id} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
@@ -228,7 +237,10 @@ export function Index() {
 
             {/* Difficulty Filter */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Difficulty Level</h3>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-purple-400 to-purple-600"></div>
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Difficulty Level</h3>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {difficultyLevels.slice(1).map((level) => (
                   <label key={level} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
@@ -255,7 +267,10 @@ export function Index() {
             {/* Tags Filter */}
             {filteredTags.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">Tags</h3>
+                <div className="flex items-center space-x-2 mb-4">
+                  <div className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600"></div>
+                  <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Tags</h3>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {filteredTags.map((tag) => (
                     <label key={tag} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">

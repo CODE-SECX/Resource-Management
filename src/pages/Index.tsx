@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, type Learning, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, GraduationCap, X, ExternalLink, Calendar, Tag, Filter, List, Grid } from 'lucide-react';
-import { Modal } from '../components/Modal';
 
 const difficultyLevels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
 export function Index() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [learning, setLearning] = useState<Learning[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,6 @@ export function Index() {
           )
           .flatMap(item => item.tags || [])
       ));
-  const [selectedItem, setSelectedItem] = useState<Learning | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -358,7 +358,7 @@ export function Index() {
                 {filteredLearning.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => navigate(`/learning/${item.id}`)}
                     className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
                   >
                     <div className="p-6">
@@ -456,7 +456,7 @@ export function Index() {
                     <div 
                       key={item.id} 
                       className="px-6 py-4 hover:bg-slate-750 cursor-pointer transition-colors"
-                      onClick={() => setSelectedItem(item)}
+                      onClick={() => navigate(`/learning/${item.id}`)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
@@ -467,15 +467,6 @@ export function Index() {
                             <ExternalLink className="ml-2 w-4 h-4 text-indigo-400 flex-shrink-0" />
                           )}
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedItem(item);
-                          }}
-                          className="text-indigo-400 hover:text-indigo-300 transition-colors text-sm"
-                        >
-                          View
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -516,84 +507,6 @@ export function Index() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
-      {/* Item Detail Modal */}
-      <Modal
-        isOpen={!!selectedItem}
-        onClose={() => setSelectedItem(null)}
-        title=""
-        size="xl"
-      >
-        {selectedItem && (
-          <div className="space-y-6 bg-slate-800 text-slate-100 p-6 rounded-xl">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-100 mb-4">{selectedItem.title}</h1>
-              
-              <div className="flex flex-wrap items-center gap-3 mb-6">
-                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border ${getDifficultyColor(selectedItem.difficulty_level)}`}>
-                  <GraduationCap className="w-4 h-4 mr-2" />
-                  {selectedItem.difficulty_level}
-                </span>
-                
-                {selectedItem.categories?.map(cat => (
-                  <span
-                    key={cat.id}
-                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm"
-                    style={{ backgroundColor: cat.color }}
-                  >
-                    {cat.name}
-                  </span>
-                ))}
-              </div>
-
-              {selectedItem.tags && selectedItem.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {selectedItem.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/50 rounded-md border border-slate-600/50"
-                    >
-                      <Tag className="w-3 h-3 mr-1" />
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {selectedItem.description && (
-              <div className="prose prose-invert prose-slate prose-lg max-w-none mx-auto prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-2">
-                <div dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
-              </div>
-            )}
-
-            {selectedItem.url && (
-              <div className="pt-4 border-t border-slate-700">
-                <a
-                  href={selectedItem.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Visit External Resource
-                </a>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-slate-700 text-sm text-slate-400">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                Added on {new Date(selectedItem.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

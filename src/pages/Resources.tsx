@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, type Resource, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
@@ -29,6 +29,88 @@ export function Resources() {
     categoryIds: [] as string[],
   });
   const [selectedFormTags, setSelectedFormTags] = useState<string[]>([]);
+  const [tagInputValue, setTagInputValue] = useState('');
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [filteredTagSuggestions, setFilteredTagSuggestions] = useState<string[]>([]);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  // Get all tags from resources
+  const allTags = Array.from(new Set(resources.flatMap(item => item.tags || [])));
+  
+  // Get filtered tags based on selected categories
+  const getFilteredTags = () => {
+    if (formData.categoryIds.length === 0) {
+      return allTags;
+    }
+    
+    return Array.from(new Set(
+      resources
+        .filter(item => 
+          formData.categoryIds.length === 0 || 
+          item.categories?.some(cat => formData.categoryIds.includes(cat.id))
+        )
+        .flatMap(item => item.tags || [])
+    ));
+  };
+  
+  const filteredTags = getFilteredTags();
+  
+  // Handle tag input changes and show suggestions
+  const handleTagInputChange = (value: string) => {
+    setTagInputValue(value);
+    
+    if (value.trim()) {
+      const suggestions = filteredTags
+        .filter(tag => 
+          tag.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedFormTags.includes(tag)
+        )
+        .slice(0, 5); // Show max 5 suggestions
+      
+      setFilteredTagSuggestions(suggestions);
+      setShowTagSuggestions(suggestions.length > 0);
+    } else {
+      setShowTagSuggestions(false);
+    }
+  };
+  
+  // Add tag from suggestions
+  const addTagFromSuggestion = (tag: string) => {
+    if (!selectedFormTags.includes(tag)) {
+      setSelectedFormTags(prev => [...prev, tag]);
+    }
+    setTagInputValue('');
+    setShowTagSuggestions(false);
+  };
+  
+  // Add tag on Enter or comma
+  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newTag = tagInputValue.trim();
+      if (newTag && !selectedFormTags.includes(newTag)) {
+        setSelectedFormTags(prev => [...prev, newTag]);
+      }
+      setTagInputValue('');
+      setShowTagSuggestions(false);
+    } else if (e.key === 'Escape') {
+      setShowTagSuggestions(false);
+    }
+  };
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tagInputRef.current && !tagInputRef.current.contains(event.target as Node)) {
+        setShowTagSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Check if we should open the form automatically
   useEffect(() => {
@@ -145,16 +227,13 @@ export function Resources() {
     if (!user) return;
 
     try {
-      const inputNewTags = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
-      const mergedTags = Array.from(new Set([...
-        selectedFormTags,
-        ...inputNewTags
-      ]));
+      // Use selectedFormTags directly since we're now using the smart tag input
+      const finalTags = selectedFormTags;
       const resourceData = {
         title: formData.title,
         description: formData.description,
         url: formData.url,
-        tags: mergedTags,
+        tags: finalTags,
         user_id: user.id,
       };
 
@@ -210,6 +289,8 @@ export function Resources() {
         categoryIds: [],
       });
       setSelectedFormTags([]);
+      setTagInputValue('');
+      setShowTagSuggestions(false);
       setShowForm(false);
       setEditingResource(null);
       fetchResources();
@@ -229,6 +310,8 @@ export function Resources() {
       categoryIds: resource.categories?.map(cat => cat.id) || [],
     });
     setSelectedFormTags(resource.tags);
+    setTagInputValue('');
+    setShowTagSuggestions(false);
     setShowForm(true);
   };
 
@@ -258,7 +341,7 @@ export function Resources() {
   };
 
   // Get all unique tags from resources
-  const allTags = Array.from(new Set(resources.flatMap(resource => resource.tags)));
+  const allTagsList = Array.from(new Set(resources.flatMap(resource => resource.tags)));
 
   // Filter resources
   const filteredResources = resources.filter(resource => {
@@ -499,43 +582,82 @@ export function Resources() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Tags
                 </label>
-                {allTags.length > 0 && (
+                
+                {/* Selected tags display */}
+                {selectedFormTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {allTags.map((tag) => {
-                      const active = selectedFormTags.includes(tag);
-                      return (
+                    {selectedFormTags.map((tag) => (
+                      <button
+                        type="button"
+                        key={tag}
+                        onClick={() => setSelectedFormTags(prev => prev.filter(t => t !== tag))}
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white border border-indigo-500 transition-colors"
+                      >
+                        {tag}
+                        <X className="ml-1 w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Category-based tag suggestions */}
+                {filteredTags.length > 0 && (
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-2">
+                      {formData.categoryIds.length > 0 ? 'Tags for selected categories:' : 'All available tags:'}
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {filteredTags
+                        .filter(tag => !selectedFormTags.includes(tag))
+                        .map((tag) => (
+                          <button
+                            type="button"
+                            key={tag}
+                            onClick={() => setSelectedFormTags(prev => [...prev, tag])}
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
+                          >
+                            <Tag className="w-3 h-3 mr-1" />
+                            {tag}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Smart tag input with autocomplete */}
+                <div className="relative">
+                  <label className="block text-xs text-gray-400 mb-1">Type to search or add new tags</label>
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={tagInputValue}
+                    onChange={(e) => handleTagInputChange(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Start typing to see suggestions..."
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
+                  />
+                  
+                  {/* Tag suggestions dropdown */}
+                  {showTagSuggestions && (
+                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredTagSuggestions.map((tag) => (
                         <button
                           type="button"
                           key={tag}
-                          aria-pressed={active}
-                          onClick={() => {
-                            setSelectedFormTags(prev => (
-                              active ? prev.filter(t => t !== tag) : [...prev, tag]
-                            ));
-                          }}
-                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                            active
-                              ? 'bg-indigo-600 text-white border-indigo-500'
-                              : 'text-gray-300 border-gray-600 hover:bg-gray-700'
-                          }`}
+                          onClick={() => addTagFromSuggestion(tag)}
+                          className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center"
                         >
+                          <Tag className="w-4 h-4 mr-2 text-gray-400" />
                           {tag}
-                          {active && (
-                            <X className="ml-1 w-3 h-3" />
-                          )}
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
-                <label className="block text-xs text-gray-400 mb-1">Add new tags (comma separated)</label>
-                <input
-                  type="text"
-                  value={formData.tags}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                  placeholder="javascript, react, tutorial"
-                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-                />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-xs text-gray-500 mt-1">
+                  Press Enter or comma to add, Escape to close suggestions
+                </div>
               </div>
 
               {allCategories.length > 0 && (

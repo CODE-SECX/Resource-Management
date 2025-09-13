@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, type Learning, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, GraduationCap, X, ExternalLink, Calendar, Tag, Filter } from 'lucide-react';
+import { Search, GraduationCap, X, ExternalLink, Calendar, Tag, Filter, List, Grid } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 const difficultyLevels = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
@@ -15,6 +15,7 @@ export function Index() {
   const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
   
   // Get all tags from learning items
   const allTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
@@ -303,10 +304,31 @@ export function Index() {
           <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-4xl font-bold text-slate-100 mb-2">Learning Resources</h1>
-              <p className="text-lg text-slate-400">
-                Discover and explore your curated learning materials
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-4xl font-bold text-slate-100 mb-2">Learning Resources</h1>
+                  <p className="text-lg text-slate-400">
+                    Discover and explore your curated learning materials
+                  </p>
+                </div>
+                {/* View Toggle */}
+                <div className="flex items-center space-x-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
+                  <button
+                    onClick={() => setViewMode('card')}
+                    className={`p-2 rounded-md transition-colors ${viewMode === 'card' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                    title="Card View"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('index')}
+                    className={`p-2 rounded-md transition-colors ${viewMode === 'index' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                    title="Index View"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -331,100 +353,135 @@ export function Index() {
             </div>
 
             {/* Learning Resources List */}
-            <div className="space-y-4">
-              {filteredLearning.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedItem(item)}
-                  className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
-                >
-                  <div className="p-6">
-                    <div className="flex items-start gap-6">
-                      {/* Main Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="text-xl font-semibold text-slate-100 group-hover:text-indigo-400 transition-colors leading-tight">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center gap-3 ml-4 shrink-0">
-                            <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getDifficultyColor(item.difficulty_level)}`}>
-                              <GraduationCap className="w-4 h-4 mr-1.5" />
-                              {item.difficulty_level}
-                            </span>
-                            {item.url && (
-                              <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                                <ExternalLink className="w-4 h-4" />
+            {viewMode === 'card' ? (
+              <div className="space-y-4">
+                {filteredLearning.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start gap-6">
+                        {/* Main Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-3">
+                            <h3 className="text-lg font-medium text-slate-100 group-hover:text-indigo-400 transition-colors leading-snug">
+                              {item.title}
+                            </h3>
+                            <div className="flex items-center gap-3 ml-4 shrink-0">
+                              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getDifficultyColor(item.difficulty_level)}`}>
+                                <GraduationCap className="w-4 h-4 mr-1.5" />
+                                {item.difficulty_level}
+                              </span>
+                              {item.url && (
+                                <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                                  <ExternalLink className="w-4 h-4" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          {item.description && (
+                            <p className="text-slate-300 text-base mb-4 leading-relaxed">
+                              {item.description.replace(/<[^>]*>/g, '').substring(0, 200)}
+                              {item.description.length > 200 && '...'}
+                            </p>
+                          )}
+
+                          {/* Categories and Tags Row */}
+                          <div className="flex items-center flex-wrap gap-3 mb-4">
+                            {/* Categories */}
+                            {item.categories && item.categories.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {item.categories.slice(0, 3).map((category) => (
+                                  <span
+                                    key={category.id}
+                                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm"
+                                    style={{ backgroundColor: category.color || '#64748B' }}
+                                  >
+                                    {category.name}
+                                  </span>
+                                ))}
+                                {item.categories.length > 3 && (
+                                  <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-400 bg-slate-700 rounded-lg">
+                                    +{item.categories.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Tags */}
+                            {item.tags && item.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {item.tags.slice(0, 4).map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/60 rounded-md border border-slate-600/50"
+                                  >
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {tag}
+                                  </span>
+                                ))}
+                                {item.tags.length > 4 && (
+                                  <span className="text-xs text-slate-500 px-2 py-1">
+                                    +{item.tags.length - 4} more tags
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
-                        </div>
 
-                        {/* Description */}
-                        {item.description && (
-                          <p className="text-slate-300 text-base mb-4 leading-relaxed">
-                            {item.description.replace(/<[^>]*>/g, '').substring(0, 200)}
-                            {item.description.length > 200 && '...'}
-                          </p>
-                        )}
-
-                        {/* Categories and Tags Row */}
-                        <div className="flex items-center flex-wrap gap-3 mb-4">
-                          {/* Categories */}
-                          {item.categories && item.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {item.categories.slice(0, 3).map((category) => (
-                                <span
-                                  key={category.id}
-                                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm"
-                                  style={{ backgroundColor: category.color || '#64748B' }}
-                                >
-                                  {category.name}
-                                </span>
-                              ))}
-                              {item.categories.length > 3 && (
-                                <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-400 bg-slate-700 rounded-lg">
-                                  +{item.categories.length - 3} more
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Tags */}
-                          {item.tags && item.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {item.tags.slice(0, 4).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/60 rounded-md border border-slate-600/50"
-                                >
-                                  <Tag className="w-3 h-3 mr-1" />
-                                  {tag}
-                                </span>
-                              ))}
-                              {item.tags.length > 4 && (
-                                <span className="text-xs text-slate-500 px-2 py-1">
-                                  +{item.tags.length - 4} more tags
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Footer Info */}
-                        <div className="flex items-center text-sm text-slate-500">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Added on {new Date(item.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
+                          {/* Footer Info */}
+                          <div className="flex items-center text-sm text-slate-500">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Added on {new Date(item.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              /* Index View */
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div className="divide-y divide-slate-700">
+                  {filteredLearning.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="px-6 py-4 hover:bg-slate-750 cursor-pointer transition-colors"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="text-sm font-normal text-slate-100 group-hover:text-indigo-400 transition-colors">
+                            {item.title}
+                          </div>
+                          {item.url && (
+                            <ExternalLink className="ml-2 w-4 h-4 text-indigo-400 flex-shrink-0" />
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedItem(item);
+                          }}
+                          className="text-indigo-400 hover:text-indigo-300 transition-colors text-sm"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* Empty State */}
             {filteredLearning.length === 0 && (

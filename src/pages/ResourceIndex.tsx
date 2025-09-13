@@ -157,7 +157,7 @@ export function ResourceIndex() {
         } lg:translate-x-0 fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-96 h-screen lg:h-[calc(100vh-2rem)] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out overflow-y-auto shadow-xl lg:shadow-2xl lg:mr-8`}>
           
           {/* Sidebar Header */}
-          <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-750/50">
+          <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-750/50 mt-8 lg:mt-0">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -167,9 +167,10 @@ export function ResourceIndex() {
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-700/50 text-slate-300 transition-colors"
+                className="lg:hidden p-2.5 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-slate-200 hover:text-white transition-all duration-200 shadow-lg hover:shadow-xl border border-slate-600 hover:border-slate-500"
+                aria-label="Close filters"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
             {activeFiltersCount > 0 && (

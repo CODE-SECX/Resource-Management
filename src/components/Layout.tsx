@@ -12,7 +12,7 @@ import {
   X,
   Search,
   Target,
- Zap
+  StickyNote
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -43,6 +43,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Learning', href: '/learning', icon: GraduationCap },
     { name: 'Learning Index', href: '/learning/index', icon: GraduationCap },
     { name: 'Payload Arsenal', href: '/payloads', icon: Target },
+    { name: 'Sticky Notes', href: '/sticky-notes', icon: StickyNote },
     { name: 'Categories', href: '/categories', icon: Settings },
   ];
 

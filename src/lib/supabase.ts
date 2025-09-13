@@ -519,3 +519,154 @@ function generateRandomToken(): string {
   }
   return token;
 }
+
+// Sticky Notes Types
+export interface StickyNote {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  color: 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange';
+  position_x: number;
+  position_y: number;
+  is_completed: boolean;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StickyNoteStats {
+  total_notes: number;
+  completed_notes: number;
+  pending_notes: number;
+  pinned_notes: number;
+  notes_by_color: {
+    yellow: number;
+    pink: number;
+    blue: number;
+    green: number;
+    purple: number;
+    orange: number;
+  };
+}
+
+// Sticky Notes CRUD Functions
+export async function getStickyNotes(): Promise<StickyNote[]> {
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getStickyNote(id: string): Promise<StickyNote | null> {
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createStickyNote(note: Omit<StickyNote, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<StickyNote> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .insert([{
+      ...note,
+      user_id: user.id
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateStickyNote(id: string, updates: Partial<StickyNote>): Promise<StickyNote> {
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteStickyNote(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('sticky_notes')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function toggleStickyNoteComplete(id: string): Promise<StickyNote> {
+  const { data: currentNote } = await supabase
+    .from('sticky_notes')
+    .select('is_completed')
+    .eq('id', id)
+    .single();
+
+  if (!currentNote) throw new Error('Note not found');
+
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .update({ is_completed: !currentNote.is_completed })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function toggleStickyNotePin(id: string): Promise<StickyNote> {
+  const { data: currentNote } = await supabase
+    .from('sticky_notes')
+    .select('is_pinned')
+    .eq('id', id)
+    .single();
+
+  if (!currentNote) throw new Error('Note not found');
+
+  const { data, error } = await supabase
+    .from('sticky_notes')
+    .update({ is_pinned: !currentNote.is_pinned })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getStickyNotesStats(): Promise<StickyNoteStats> {
+  const { data, error } = await supabase
+    .rpc('get_sticky_notes_stats');
+
+  if (error) throw error;
+  return data?.[0] || {
+    total_notes: 0,
+    completed_notes: 0,
+    pending_notes: 0,
+    pinned_notes: 0,
+    notes_by_color: {
+      yellow: 0,
+      pink: 0,
+      blue: 0,
+      green: 0,
+      purple: 0,
+      orange: 0
+    }
+  };
+}

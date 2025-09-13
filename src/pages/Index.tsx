@@ -174,7 +174,7 @@ export function Index() {
         } lg:translate-x-0 fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-96 h-screen lg:h-[calc(100vh-2rem)] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out overflow-y-auto shadow-xl lg:shadow-2xl lg:mr-8`}>
           
           {/* Sidebar Header */}
-          <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-750/50 mt-8 lg:mt-0">
+          <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-750/50 mt-10 lg:mt-0">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">

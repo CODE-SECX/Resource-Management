@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthForm } from './components/AuthForm';
@@ -16,28 +15,8 @@ import PublicResource from './pages/PublicResource';
 import { Payloads } from './pages/Payloads';
 import { PayloadDetail } from './pages/PayloadDetail';
 import { PayloadForm } from './pages/PayloadForm';
+import StickyNotes from './pages/StickyNotes';
 import { Toaster } from 'react-hot-toast';
-
-// ProtectedRoute component is assumed to be defined elsewhere and handles authentication logic
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    // Redirect to AuthForm if not authenticated
-    // You might want to adjust this logic based on your specific needs, e.g., redirect to a login page
-    return <AuthForm />;
-  }
-
-  return children;
-}
 
 
 function AppRoutes() {
@@ -70,6 +49,7 @@ function AppRoutes() {
         <Route path="/payloads/:id" element={<PayloadDetail />} />
         <Route path="/payloads/create" element={<PayloadForm />} />
         <Route path="/payloads/:id/edit" element={<PayloadForm />} />
+        <Route path="/sticky-notes" element={<StickyNotes />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>

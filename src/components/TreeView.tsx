@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Search, FolderPlus, Tag, Hash } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Search, FolderPlus, Tag, Hash, Copy, PlusSquare, CheckCircle, Files } from 'lucide-react';
 
 export type TreeNode = {
   id: string;
@@ -15,6 +15,9 @@ export type NodeActions = {
   onAddChild?: (parent: TreeNode) => Promise<void> | void;
   onRename?: (node: TreeNode) => Promise<void> | void;
   onDelete?: (node: TreeNode) => Promise<void> | void;
+  onCopyTag?: (tag: TreeNode) => Promise<void> | void;
+  onBulkAdd?: (parent: TreeNode) => Promise<void> | void;
+  onCopyAllTags?: (parent: TreeNode) => Promise<void> | void;
 };
 
 export interface TreeViewProps {
@@ -38,6 +41,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
   const [childrenMap, setChildrenMap] = useState<Record<string, TreeNode[]>>({});
   const [loadingMap, setLoadingMap] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [copiedTagId, setCopiedTagId] = useState<string | null>(null);
+  const [copiedAllTagsId, setCopiedAllTagsId] = useState<string | null>(null);
 
   // Reset caches when version changes
   useEffect(() => {
@@ -258,6 +263,64 @@ export const TreeView: React.FC<TreeViewProps> = ({
 
           {/* Always Visible Action Buttons */}
           <div className="flex-shrink-0 flex items-center gap-1">
+            {/* Copy button for tags */}
+            {node.type === 'tag' && actions.onCopyTag && (
+              <button 
+                className={`p-1.5 rounded transition-all duration-200 ${
+                  copiedTagId === node.id 
+                    ? 'text-green-400 bg-green-900/30' 
+                    : 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-900/20'
+                }`}
+                onClick={() => {
+                  actions.onCopyTag?.(node);
+                  setCopiedTagId(node.id);
+                  setTimeout(() => setCopiedTagId(null), 2000);
+                }} 
+                title="Copy tag name"
+              >
+                {copiedTagId === node.id ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            
+            {/* Copy all tags button for subcategories */}
+            {node.type === 'subcategory' && actions.onCopyAllTags && (
+              <button 
+                className={`p-1.5 rounded transition-all duration-200 ${
+                  copiedAllTagsId === node.id 
+                    ? 'text-green-400 bg-green-900/30' 
+                    : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-900/20'
+                }`}
+                onClick={() => {
+                  actions.onCopyAllTags?.(node);
+                  setCopiedAllTagsId(node.id);
+                  setTimeout(() => setCopiedAllTagsId(null), 3000);
+                }} 
+                title="Copy all tags (comma-separated)"
+              >
+                {copiedAllTagsId === node.id ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <Files className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            
+            {/* Bulk add button for categories and subcategories */}
+            {(node.type === 'category' || node.type === 'subcategory') && actions.onBulkAdd && (
+              <button 
+                className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-yellow-900/20 rounded transition-all duration-200" 
+                onClick={() => actions.onBulkAdd?.(node)} 
+                title="Bulk add multiple tags"
+              >
+                <PlusSquare className="w-4 h-4" />
+              </button>
+            )}
+            
+            {/* Regular add button */}
             {actions.onAddChild && (
               <button 
                 className="p-1.5 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded transition-all duration-200" 
@@ -267,6 +330,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 <Plus className="w-4 h-4" />
               </button>
             )}
+            
+            {/* Edit button */}
             {actions.onRename && (
               <button 
                 className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded transition-all duration-200" 
@@ -276,6 +341,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
+            
+            {/* Delete button */}
             {actions.onDelete && (
               <button 
                 className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-all duration-200" 

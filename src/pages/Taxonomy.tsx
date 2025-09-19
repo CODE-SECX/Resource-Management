@@ -21,6 +21,7 @@ import { Folder, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TreeView, type TreeNode } from '../components/TreeView';
 import { TaxonomyModal, type TaxonomyModalData } from '../components/TaxonomyModal';
+import { BulkTagModal } from '../components/BulkTagModal';
 
 export default function Taxonomy() {
   const { user } = useAuth();
@@ -36,6 +37,11 @@ export default function Taxonomy() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<TaxonomyModalData | null>(null);
+  
+  // Bulk tag modal state
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkModalParent, setBulkModalParent] = useState<{ id: string; name: string; type: 'category' | 'subcategory' } | null>(null);
+  const [existingTagsForModal, setExistingTagsForModal] = useState<string[]>([]);
 
   // Track which categories we've attempted legacy backfill for (per session)
   const [backfilledCategories, setBackfilledCategories] = useState<Set<string>>(new Set());
@@ -202,6 +208,143 @@ export default function Taxonomy() {
     }
   };
 
+  // Copy tag functionality
+  const handleCopyTag = async (tag: TreeNode) => {
+    try {
+      await navigator.clipboard.writeText(tag.label);
+      toast.success(`Copied "${tag.label}" to clipboard`);
+    } catch (e) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = tag.label;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success(`Copied "${tag.label}" to clipboard`);
+    }
+  };
+
+  // Copy all tags from a subcategory
+  const handleCopyAllTags = async (subcategory: TreeNode) => {
+    if (!user) return;
+    
+    try {
+      // Get all tags for this subcategory
+      const tags = await getTags(user.id, subcategory.id);
+      
+      if (tags.length === 0) {
+        toast.error('No tags found in this subcategory');
+        return;
+      }
+      
+      // Create comma-separated string
+      const tagNames = tags.map(tag => tag.name).join(', ');
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(tagNames);
+      toast.success(`Copied ${tags.length} tags from "${subcategory.label}" to clipboard`);
+    } catch (e) {
+      console.error('Failed to copy all tags:', e);
+      toast.error('Failed to copy tags');
+    }
+  };
+
+  // Bulk tag creation
+  const handleBulkAdd = async (parent: TreeNode) => {
+    if (!user) return;
+    
+    try {
+      // Get existing tags to show duplicates
+      let existingTags: any[] = [];
+      if (parent.type === 'category') {
+        existingTags = await getTagsByCategory(user.id, parent.id);
+      } else {
+        existingTags = await getTags(user.id, parent.id);
+      }
+      
+      setExistingTagsForModal(existingTags.map(tag => tag.name));
+      setBulkModalParent({
+        id: parent.id,
+        name: parent.label,
+        type: parent.type as 'category' | 'subcategory'
+      });
+      setBulkModalOpen(true);
+    } catch (e) {
+      console.error('Failed to load existing tags:', e);
+      toast.error('Failed to load existing tags');
+    }
+  };
+
+  const handleBulkTagSubmit = async (tagNames: string[]) => {
+    if (!bulkModalParent || !user) return;
+
+    try {
+      // First, check which tags already exist in this location
+      let existingTagsHere: any[] = [];
+      if (bulkModalParent.type === 'category') {
+        existingTagsHere = await getTagsByCategory(user.id, bulkModalParent.id);
+      } else {
+        existingTagsHere = await getTags(user.id, bulkModalParent.id);
+      }
+
+      const existingHereNames = existingTagsHere.map(tag => tag.name.toLowerCase());
+      const duplicateInHere = tagNames.filter(name => existingHereNames.includes(name.toLowerCase()));
+      const newTagNames = tagNames.filter(name => !existingHereNames.includes(name.toLowerCase()));
+
+      if (newTagNames.length === 0) {
+        toast.error(`All ${duplicateInHere.length} tags already exist in this location`);
+        bumpTree(); // Still refresh the tree in case of any changes
+        return;
+      }
+
+      // Create only the new tags
+      const results = await Promise.allSettled(
+        newTagNames.map(name => {
+          if (bulkModalParent.type === 'category') {
+            return createTag({
+              user_id: user.id,
+              category_id: bulkModalParent.id,
+              name
+            });
+          } else {
+            return createTag({
+              user_id: user.id,
+              subcategory_id: bulkModalParent.id,
+              name
+            });
+          }
+        })
+      );
+
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      // Treat duplicate key errors as benign (race on per-location uniqueness)
+      const failedHard = results.filter(r => r.status === 'rejected' && !(r as any).reason?.code === '23505' && !((r as any).reason?.message || '').includes('duplicate key')).length;
+
+      // Provide detailed feedback
+      if (successful > 0 && failedHard === 0) {
+        const hereCount = duplicateInHere.length;
+        const suffix = hereCount > 0 ? `. ${hereCount} already in this location.` : '';
+        toast.success(`Created ${successful} new tag${successful !== 1 ? 's' : ''}${suffix}`);
+      } else if (successful > 0 && failedHard > 0) {
+        toast.error(`Created ${successful} tag${successful !== 1 ? 's' : ''}, but ${failedHard} failed.`);
+      } else {
+        // Nothing created and remaining were duplicates or hard failures
+        if (duplicateInHere.length > 0) {
+          toast.error(`No new tags created (${duplicateInHere.length} already in this location).`);
+        } else {
+          toast.error('Failed to create tags');
+        }
+      }
+
+      bumpTree();
+    } catch (e) {
+      console.error('Bulk tag creation error:', e);
+      toast.error('Failed to create tags');
+      // Keep modal open for correction, don't rethrow
+    }
+  };
+
   // Smart add functionality with better UX
   const handleSmartAdd = (node: TreeNode) => {
     if (node.type === 'category') {
@@ -282,9 +425,12 @@ export default function Taxonomy() {
   const actionsByType = {
     category: {
       onAddChild: handleSmartAdd,
+      onBulkAdd: handleBulkAdd,
     },
     subcategory: {
       onAddChild: handleSmartAdd,
+      onBulkAdd: handleBulkAdd,
+      onCopyAllTags: handleCopyAllTags,
       onRename: (node: TreeNode) => {
         openModal({
           mode: 'edit-subcategory',
@@ -311,6 +457,7 @@ export default function Taxonomy() {
       },
     },
     tag: {
+      onCopyTag: handleCopyTag,
       onRename: (node: TreeNode) => {
         openModal({
           mode: 'edit-tag',
@@ -407,15 +554,15 @@ export default function Taxonomy() {
               <div className="text-sm text-gray-400 space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span><strong className="text-blue-300">Categories:</strong> Add subcategories or tags</span>
+                  <span><strong className="text-blue-300">Categories:</strong> Add single/bulk tags</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span><strong className="text-green-300">Subcategories:</strong> Add tags, edit, delete</span>
+                  <span><strong className="text-green-300">Subcategories:</strong> Copy all tags, add single/bulk</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span><strong className="text-purple-300">Tags:</strong> Edit, delete</span>
+                  <span><strong className="text-purple-300">Tags:</strong> Copy individual, edit, delete</span>
                 </div>
               </div>
             </div>
@@ -437,6 +584,19 @@ export default function Taxonomy() {
         onClose={closeModal}
         data={modalData}
         onSubmit={handleModalSubmit}
+      />
+      
+      <BulkTagModal
+        isOpen={bulkModalOpen}
+        onClose={() => {
+          setBulkModalOpen(false);
+          setBulkModalParent(null);
+          setExistingTagsForModal([]);
+        }}
+        parentName={bulkModalParent?.name || ''}
+        parentType={bulkModalParent?.type || 'category'}
+        existingTags={existingTagsForModal}
+        onSubmit={handleBulkTagSubmit}
       />
     </div>
   );

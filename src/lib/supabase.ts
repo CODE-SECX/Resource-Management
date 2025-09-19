@@ -695,13 +695,35 @@ export async function createTag(input: { user_id: string; subcategory_id?: strin
     delete payload.description;
   }
 
-  const { data, error } = await supabase
-    .from('tags')
-    .insert([payload])
-    .select('*')
-    .single();
-  if (error) throw error;
-  return data as Tag;
+  // Use upsert with per-location conflict target to avoid 409s on duplicates
+  const conflictTarget = payload.subcategory_id ? 'user_id,subcategory_id,name' : 'user_id,category_id,name';
+
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .upsert([payload], { onConflict: conflictTarget, ignoreDuplicates: false })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data as Tag;
+  } catch (error: any) {
+    // Fallback: if conflict due to existing row, fetch and return it
+    const isConflict = error?.code === '23505' || error?.status === 409 || (error?.message || '').toLowerCase().includes('duplicate');
+    if (isConflict) {
+      const query = supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', payload.user_id)
+        .eq('name', payload.name)
+        .limit(1)
+        .single();
+      if (payload.subcategory_id) (query as any).eq('subcategory_id', payload.subcategory_id);
+      if (payload.category_id && !payload.subcategory_id) (query as any).eq('category_id', payload.category_id).is('subcategory_id', null);
+      const { data: existing, error: fetchError } = await query as any;
+      if (!fetchError && existing) return existing as Tag;
+    }
+    throw error;
+  }
 }
 
 export async function updateTag(id: string, updates: Partial<Pick<Tag, 'name' | 'description'>>): Promise<Tag> {
@@ -765,44 +787,15 @@ export async function upsertCategoryTagsByNames(userId: string, categoryId: stri
     const { data, error } = await supabase
       .from('tags')
       .upsert(rows, { 
-        onConflict: 'user_id,name',
+        onConflict: 'user_id,category_id,name',
         ignoreDuplicates: false 
       })
       .select('*');
     
-    if (error) {
-      // Handle duplicate key constraint specifically
-      if (error.code === '23505') {
-        console.warn('Some tags already exist, fetching existing tags instead');
-        // Fetch existing tags that match the names
-        const { data: existingData, error: fetchError } = await supabase
-          .from('tags')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('category_id', categoryId)
-          .in('name', uniqueNames);
-        
-        if (fetchError) throw fetchError;
-        return (existingData || []) as Tag[];
-      }
-      throw error;
-    }
+    if (error) throw error;
     
     return (data || []) as Tag[];
   } catch (error: any) {
-    // Additional fallback for constraint violations
-    if (error.code === '23505' || error.message?.includes('duplicate key')) {
-      console.warn('Duplicate key constraint, fetching existing tags');
-      const { data: existingData, error: fetchError } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('category_id', categoryId)
-        .in('name', uniqueNames);
-      
-      if (fetchError) throw fetchError;
-      return (existingData || []) as Tag[];
-    }
     throw error;
   }
 }

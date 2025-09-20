@@ -175,6 +175,7 @@ export default function Taxonomy() {
 
   // Modal handlers
   const openModal = (data: TaxonomyModalData) => {
+    console.log('openModal called with data:', data);
     setModalData(data);
     setModalOpen(true);
   };
@@ -386,8 +387,11 @@ export default function Taxonomy() {
 
   // Smart add functionality with intuitive hierarchy
   const handleSmartAdd = (node: TreeNode) => {
+    console.log('handleSmartAdd called with node:', { id: node.id, label: node.label, type: node.type });
+    
     if (node.type === 'category') {
       // Categories: directly add subcategory
+      console.log('Opening add-subcategory modal for category:', node.label);
       openModal({
         mode: 'add-subcategory',
         parentId: node.id,
@@ -395,11 +399,14 @@ export default function Taxonomy() {
       });
     } else if (node.type === 'subcategory') {
       // Subcategories: directly add tag
+      console.log('Opening add-subcategory-tag modal for subcategory:', node.label);
       openModal({
         mode: 'add-subcategory-tag',
         parentId: node.id,
         parentName: node.label
       });
+    } else {
+      console.log('Unknown node type:', node.type);
     }
   };
 

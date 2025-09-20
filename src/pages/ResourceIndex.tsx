@@ -1,39 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, type Resource, type Category } from '../lib/supabase';
+import { supabase, type Resource, type Category, type Subcategory, type Tag } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, ExternalLink, X, Filter, Calendar, Tag, List, Grid } from 'lucide-react';
+import { Search, ExternalLink, X, Filter, Calendar, Tag as TagIcon, List, Grid } from 'lucide-react';
+import { TaxonomyManager } from '../components/TaxonomyManager';
 
 export function ResourceIndex() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [resources, setResources] = useState<Resource[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
 
-  // Get all tags from resources
-  const allTags = Array.from(new Set(resources.flatMap(item => item.tags || [])));
-  
-  // Get filtered tags based on selected categories
-  const filteredTags = selectedCategories.length === 0 
-    ? allTags
-    : Array.from(new Set(
-        resources
-          .filter(item => 
-            selectedCategories.length === 0 || 
-            item.categories?.some(cat => selectedCategories.includes(cat.id))
-          )
-          .flatMap(item => item.tags || [])
-      ));
-
   useEffect(() => {
     fetchResources();
-    fetchCategories();
   }, [user]);
 
   const fetchResources = async () => {
@@ -66,61 +51,55 @@ export function ResourceIndex() {
     }
   };
 
-  const fetchCategories = async () => {
-    if (!user) return;
-    try {
-      // Fetch only categories that have resource items
-      const { data, error } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          resource_categories!inner(
-            resource_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-      
-      // Remove duplicates and format data
-      const uniqueCategories = data?.reduce((acc, item) => {
-        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
-          acc.push({
-            id: item.id,
-            name: item.name,
-            color: item.color,
-            user_id: item.user_id,
-            created_at: item.created_at
-          });
-        }
-        return acc;
-      }, [] as Category[]) || [];
-      
-      setCategories(uniqueCategories);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
   const filteredResources = resources.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategories.length === 0 || 
                           item.categories?.some(cat => selectedCategories.includes(cat.id));
+    const matchesSubcategory = selectedSubcategories.length === 0 ||
+                              item.subcategories?.some(sub => selectedSubcategories.includes(sub));
     const matchesTags = selectedTags.length === 0 ||
                        selectedTags.some(tag => item.tags?.includes(tag));
 
-    return matchesSearch && matchesCategory && matchesTags;
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesTags;
   });
 
   const clearAllFilters = () => {
     setSelectedCategories([]);
+    setSelectedSubcategories([]);
     setSelectedTags([]);
     setSearchQuery('');
   };
 
-  const activeFiltersCount = selectedCategories.length + selectedTags.length;
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const handleSubcategoryToggle = (subcategoryId: string) => {
+    setSelectedSubcategories(prev => {
+      if (prev.includes(subcategoryId)) {
+        return prev.filter(id => id !== subcategoryId);
+      } else {
+        return [...prev, subcategoryId];
+      }
+    });
+  };
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tag)) {
+        return prev.filter(t => t !== tag);
+      } else {
+        return [...prev, tag];
+      }
+    });
+  };
 
   if (loading) {
     return (
@@ -142,9 +121,9 @@ export function ResourceIndex() {
       >
         <div className="flex items-center space-x-2">
           <Filter className="w-5 h-5 text-slate-300" />
-          {activeFiltersCount > 0 && (
+          {(selectedCategories.length + selectedSubcategories.length + selectedTags.length) > 0 && (
             <span className="bg-indigo-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-              {activeFiltersCount}
+              {selectedCategories.length + selectedSubcategories.length + selectedTags.length}
             </span>
           )}
         </div>
@@ -173,84 +152,19 @@ export function ResourceIndex() {
                 <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-600 transition-all duration-200 text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-              >
-                <X className="w-3 h-3" />
-                <span>Clear all filters ({activeFiltersCount})</span>
-              </button>
-            )}
           </div>
 
-          <div className="p-6 space-y-8">
-            {/* Categories Filter */}
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600"></div>
-                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Categories</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <label key={category.id} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedCategories(prev => [...prev, category.id]);
-                        } else {
-                          setSelectedCategories(prev => prev.filter(id => id !== category.id));
-                        }
-                      }}
-                      className="h-3 w-3 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
-                    />
-                    <div className="flex items-center space-x-1.5">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: category.color || '#64748B' }}
-                      ></div>
-                      <span className="text-xs text-slate-300 font-medium">
-                        {category.name}
-                      </span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Tags Filter */}
-            {filteredTags.length > 0 && (
-              <div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600"></div>
-                  <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Tags</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {filteredTags.map((tag) => (
-                    <label key={tag} className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700 cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.includes(tag)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedTags(prev => [...prev, tag]);
-                          } else {
-                            setSelectedTags(prev => prev.filter(t => t !== tag));
-                          }
-                        }}
-                        className="h-3 w-3 text-indigo-500 border-slate-600 rounded focus:ring-indigo-500 focus:ring-offset-0 bg-slate-700"
-                      />
-                      <span className="text-xs text-slate-300 font-medium flex items-center">
-                        <Tag className="w-2.5 h-2.5 mr-1" />
-                        {tag}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="p-6">
+            <TaxonomyManager
+              type="resources"
+              selectedCategories={selectedCategories}
+              selectedSubcategories={selectedSubcategories}
+              selectedTags={selectedTags}
+              onCategoryToggle={handleCategoryToggle}
+              onSubcategoryToggle={handleSubcategoryToggle}
+              onTagToggle={handleTagToggle}
+              onClearAll={clearAllFilters}
+            />
           </div>
         </div>
 
@@ -341,7 +255,7 @@ export function ResourceIndex() {
                             </p>
                           )}
 
-                          {/* Categories and Tags Row */}
+                          {/* Categories, Subcategories and Tags Row */}
                           <div className="flex items-center flex-wrap gap-3 mb-4">
                             {/* Categories */}
                             {item.categories && item.categories.length > 0 && (
@@ -363,6 +277,25 @@ export function ResourceIndex() {
                               </div>
                             )}
 
+                            {/* Subcategories */}
+                            {item.subcategories && item.subcategories.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {item.subcategories.slice(0, 3).map((subcategory) => (
+                                  <span
+                                    key={subcategory}
+                                    className="inline-flex items-center px-2 py-1 text-xs text-emerald-300 bg-emerald-900/30 rounded-md border border-emerald-700/50"
+                                  >
+                                    {subcategory}
+                                  </span>
+                                ))}
+                                {item.subcategories.length > 3 && (
+                                  <span className="text-xs text-slate-500 px-2 py-1">
+                                    +{item.subcategories.length - 3} more subcategories
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
                             {/* Tags */}
                             {item.tags && item.tags.length > 0 && (
                               <div className="flex flex-wrap gap-2">
@@ -371,7 +304,7 @@ export function ResourceIndex() {
                                     key={tag}
                                     className="inline-flex items-center px-2 py-1 text-xs text-slate-300 bg-slate-700/60 rounded-md border border-slate-600/50"
                                   >
-                                    <Tag className="w-3 h-3 mr-1" />
+                                    <TagIcon className="w-3 h-3 mr-1" />
                                     {tag}
                                   </span>
                                 ))}

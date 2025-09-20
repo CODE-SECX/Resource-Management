@@ -365,6 +365,28 @@
   }
 }
 
+/* Rich content styling - preserve inline styles from TinyMCE */
+.rich-content {
+  color: #d1d5db;
+}
+
+/* Ensure inline styles take precedence over any CSS classes */
+.rich-content [style*="color"] {
+  color: revert !important;
+}
+
+.rich-content span[style],
+.rich-content p[style],
+.rich-content div[style],
+.rich-content strong[style],
+.rich-content em[style],
+.rich-content b[style],
+.rich-content i[style] {
+  /* Let inline styles override everything */
+  all: revert;
+  color: revert !important;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   * {

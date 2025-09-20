@@ -36,7 +36,6 @@ export interface Subcategory {
   description?: string | null;
   color?: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 // Note: This Tag interface represents the normalized Tag entity that belongs to a subcategory.
@@ -50,7 +49,6 @@ export interface Tag {
   description?: string | null;
   color?: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface Resource {

@@ -10,7 +10,7 @@ import {
   setResourceTags,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -19,16 +19,11 @@ export function Resources() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [resources, setResources] = useState<Resource[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedSubcategoryFilters, setSelectedSubcategoryFilters] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -139,7 +134,6 @@ export function Resources() {
 
   useEffect(() => {
     fetchResources();
-    fetchCategories();
     fetchAllCategoriesForForm();
   }, [user]);
 
@@ -175,43 +169,6 @@ export function Resources() {
     }
   };
 
-  const fetchCategories = async () => {
-    if (!user) return;
-
-    try {
-      // Fetch only categories that have resource items
-      const { data, error } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          resource_categories!inner(
-            resource_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-      
-      // Remove duplicates and format data
-      const uniqueCategories = data?.reduce((acc, item) => {
-        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
-          acc.push({
-            id: item.id,
-            name: item.name,
-            color: item.color,
-            user_id: item.user_id,
-            created_at: item.created_at
-          });
-        }
-        return acc;
-      }, [] as Category[]) || [];
-      
-      setCategories(uniqueCategories);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
   const fetchAllCategoriesForForm = async () => {
     if (!user) return;
@@ -404,27 +361,12 @@ export function Resources() {
     }
   };
 
-  // Get all unique subcategories from resources
-  const allSubcategories = Array.from(new Set(resources.flatMap(resource => resource.subcategories || [])));
 
   // Filter resources
   const filteredResources = resources.filter(resource => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesCategories = selectedCategories.length === 0 ||
-                             resource.categories?.some(cat => selectedCategories.includes(cat.id));
-
-    const matchesTags = selectedTags.length === 0 ||
-                       selectedTags.some(tag => resource.tags.includes(tag));
-    const matchesSubcategories = selectedSubcategoryFilters.length === 0 ||
-                          selectedSubcategoryFilters.some(sc => (resource.subcategories || []).includes(sc));
-
-    const matchesDate = (!dateRange.start && !dateRange.end) ||
-                       ((!dateRange.start || new Date(resource.created_at) >= new Date(dateRange.start)) &&
-                        (!dateRange.end || new Date(resource.created_at) <= new Date(dateRange.end)));
-
-    return matchesSearch && matchesCategories && matchesTags && matchesSubcategories && matchesDate;
+    return matchesSearch;
   });
 
   if (loading) {
@@ -482,157 +424,18 @@ export function Resources() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-gray-800 rounded-lg p-6 mb-6 space-y-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search resources..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-              />
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-300">Filters:</span>
-          </div>
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search resources..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-3 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
+          />
         </div>
-
-        {/* Category filters */}
-        {categories.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Categories</h4>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategories(prev =>
-                      prev.includes(category.id)
-                        ? prev.filter(id => id !== category.id)
-                        : [...prev, category.id]
-                    );
-                  }}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedCategories.includes(category.id)
-                      ? 'text-white'
-                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
-                  }`}
-                  style={{
-                    backgroundColor: selectedCategories.includes(category.id) ? category.color : undefined,
-                  }}
-                >
-                  {category.name}
-                  {selectedCategories.includes(category.id) && (
-                    <X className="ml-1 w-3 h-3" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Date Range Filter */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-300 mb-2">Date Range</h4>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">From</label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">To</label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
-              />
-            </div>
-            {(dateRange.start || dateRange.end) && (
-              <button
-                onClick={() => setDateRange({ start: '', end: '' })}
-                className="mt-5 p-2 text-gray-400 hover:text-red-400 transition-colors"
-                title="Clear date filter"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Tag filters */}
-        {allTags.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Tags</h4>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setSelectedTags(prev =>
-                      prev.includes(tag)
-                        ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
-                  }}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedTags.includes(tag)
-                      ? 'bg-indigo-600 text-white border border-indigo-500'
-                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
-                  }`}
-                >
-                  <Tag className="w-3 h-3 mr-1" />
-                  {tag}
-                  {selectedTags.includes(tag) && (
-                    <X className="ml-1 w-3 h-3" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Subcategory filters */}
-        {allSubcategories.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Subcategories</h4>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-              {allSubcategories.map((sc) => (
-                <button
-                  key={sc}
-                  onClick={() => {
-                    setSelectedSubcategoryFilters(prev =>
-                      prev.includes(sc)
-                        ? prev.filter(s => s !== sc)
-                        : [...prev, sc]
-                    );
-                  }}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedSubcategoryFilters.includes(sc)
-                      ? 'bg-purple-600 text-white border border-purple-500'
-                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
-                  }`}
-                >
-                  {sc}
-                  {selectedSubcategoryFilters.includes(sc) && (
-                    <X className="ml-1 w-3 h-3" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Resource Form Modal */}
@@ -984,8 +787,11 @@ export function Resources() {
 
                 {resource.description && (
                   <div 
-                    className="text-gray-300 text-sm mb-3 line-clamp-3"
+                    className="text-sm mb-3 line-clamp-3 rich-content"
                     dangerouslySetInnerHTML={{ __html: resource.description }}
+                    style={{
+                      color: '#d1d5db',
+                    }}
                   />
                 )}
 

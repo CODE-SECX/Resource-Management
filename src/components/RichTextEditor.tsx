@@ -39,10 +39,16 @@ export function RichTextEditor({
             'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
           ],
           toolbar: 
-            'undo redo | blocks | bold italic forecolor | alignleft aligncenter ' +
+            'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter ' +
             'alignright alignjustify | bullist numlist outdent indent | ' +
             'removeformat | help',
           placeholder: placeholder,
+          // Ensure inline styles are preserved
+          valid_elements: '*[*]',
+          extended_valid_elements: '*[*]',
+          keep_styles: true,
+          verify_html: false,
+          convert_urls: false,
           content_style: `
             body { 
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 

@@ -46,7 +46,6 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Payload Arsenal', href: '/payloads', icon: Target },
     { name: 'Sticky Notes', href: '/sticky-notes', icon: StickyNote },
     { name: 'Taxonomy', href: '/taxonomy', icon: Tag },
-    { name: 'Categories', href: '/categories', icon: Settings },
   ];
 
   const handleSignOut = async () => {

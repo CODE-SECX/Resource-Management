@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, type Learning, type Category, type Subcategory, type Tag } from '../lib/supabase';
+import { supabase, type Learning } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, GraduationCap, X, ExternalLink, Calendar, Tag as TagIcon, Filter, List, Grid } from 'lucide-react';
 import { TaxonomyManager } from '../components/TaxonomyManager';
@@ -368,11 +368,11 @@ export function Index() {
                 </div>
                 <h3 className="text-xl font-semibold text-slate-100 mb-2">No resources found</h3>
                 <p className="text-slate-400 mb-6 max-w-md mx-auto">
-                  {searchQuery || activeFiltersCount > 0
+                  {searchQuery || (selectedCategories.length + selectedSubcategories.length + selectedTags.length) > 0
                     ? "Try adjusting your search query or filters to find more resources."
                     : "Start by adding some learning resources to see them here."}
                 </p>
-                {(searchQuery || activeFiltersCount > 0) && (
+                {(searchQuery || (selectedCategories.length + selectedSubcategories.length + selectedTags.length) > 0) && (
                   <button
                     onClick={clearAllFilters}
                     className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"

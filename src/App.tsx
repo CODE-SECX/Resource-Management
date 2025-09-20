@@ -5,7 +5,6 @@ import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import { Resources } from './pages/Resources';
 import { Learning } from './pages/Learning';
-import { Categories } from './pages/Categories';
 import { Index } from './pages/Index';
 import { ResourceIndex } from './pages/ResourceIndex';
 import { ResourceDetail } from './pages/ResourceDetail';
@@ -45,7 +44,7 @@ function AppRoutes() {
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/index" element={<Index />} />
         <Route path="/learning/:id" element={<LearningDetail />} />
-        <Route path="/categories" element={<Categories />} />
+        <Route path="/categories" element={<Navigate to="/taxonomy" replace />} />
         <Route path="/taxonomy" element={<Taxonomy />} />
         <Route path="/payloads" element={<Payloads />} />
         <Route path="/payloads/:id" element={<PayloadDetail />} />

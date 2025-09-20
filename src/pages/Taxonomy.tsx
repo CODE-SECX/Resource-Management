@@ -17,11 +17,31 @@ import {
   updateTag,
   deleteTag,
 } from '../lib/supabase';
-import { Folder, Plus, Search } from 'lucide-react';
+import { 
+  Folder, 
+  Plus, 
+  Search, 
+  Tag, 
+  Palette, 
+  Edit2, 
+  Trash2, 
+  X, 
+  BarChart3, 
+  Layers, 
+  Hash,
+  TrendingUp,
+  Activity,
+  Settings
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TreeView, type TreeNode } from '../components/TreeView';
 import { TaxonomyModal, type TaxonomyModalData } from '../components/TaxonomyModal';
 import { BulkTagModal } from '../components/BulkTagModal';
+
+const predefinedColors = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4',
+  '#84CC16', '#F97316', '#EC4899', '#6366F1', '#14B8A6', '#F43F5E',
+];
 
 export default function Taxonomy() {
   const { user } = useAuth();
@@ -46,10 +66,29 @@ export default function Taxonomy() {
   // Track which categories we've attempted legacy backfill for (per session)
   const [backfilledCategories, setBackfilledCategories] = useState<Set<string>>(new Set());
 
+  // Categories management state
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    description: '',
+    color: '#3B82F6',
+  });
+  const [categoryStats, setCategoryStats] = useState<Record<string, { resources: number; learning: number }>>({});
+  const [totalStats, setTotalStats] = useState({
+    categories: 0,
+    subcategories: 0,
+    tags: 0,
+    resources: 0,
+    learning: 0
+  });
+
   useEffect(() => {
     if (!user) return;
     (async () => {
       await fetchCategories();
+      await fetchCategoryStats();
+      await fetchTotalStats();
       setLoading(false);
     })();
   }, [user]);
@@ -345,74 +384,17 @@ export default function Taxonomy() {
     }
   };
 
-  // Smart add functionality with better UX
+  // Smart add functionality with intuitive hierarchy
   const handleSmartAdd = (node: TreeNode) => {
     if (node.type === 'category') {
-      // Show a professional choice dialog
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
-      modal.innerHTML = `
-        <div class="bg-gray-800 rounded-lg p-6 max-w-md mx-4 border border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-100 mb-4">Add to "${node.label}"</h3>
-          <div class="space-y-3">
-            <button id="add-subcategory" class="w-full p-3 text-left bg-green-900/20 hover:bg-green-800/30 border border-green-700/30 rounded-lg transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-gray-100 font-medium">Add Subcategory</div>
-                  <div class="text-xs text-gray-400">Create a new subcategory under this category</div>
-                </div>
-              </div>
-            </button>
-            <button id="add-category-tag" class="w-full p-3 text-left bg-purple-900/20 hover:bg-purple-800/30 border border-purple-700/30 rounded-lg transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-gray-100 font-medium">Add Category-Level Tag</div>
-                  <div class="text-xs text-gray-400">Create a tag directly under this category</div>
-                </div>
-              </div>
-            </button>
-          </div>
-          <button id="cancel-choice" class="mt-4 w-full px-4 py-2 text-gray-400 hover:text-gray-200 transition-colors">Cancel</button>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      const cleanup = () => document.body.removeChild(modal);
-      
-      modal.querySelector('#add-subcategory')?.addEventListener('click', () => {
-        cleanup();
-        openModal({
-          mode: 'add-subcategory',
-          parentId: node.id,
-          parentName: node.label
-        });
-      });
-      
-      modal.querySelector('#add-category-tag')?.addEventListener('click', () => {
-        cleanup();
-        openModal({
-          mode: 'add-category-tag',
-          parentId: node.id,
-          parentName: node.label
-        });
-      });
-      
-      modal.querySelector('#cancel-choice')?.addEventListener('click', cleanup);
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) cleanup();
+      // Categories: directly add subcategory
+      openModal({
+        mode: 'add-subcategory',
+        parentId: node.id,
+        parentName: node.label
       });
     } else if (node.type === 'subcategory') {
+      // Subcategories: directly add tag
       openModal({
         mode: 'add-subcategory-tag',
         parentId: node.id,
@@ -500,6 +482,156 @@ export default function Taxonomy() {
     }
   };
 
+  const fetchCategoryStats = async () => {
+    if (!user) return;
+
+    try {
+      const [resourcesResult, learningResult] = await Promise.all([
+        supabase
+          .from('resource_categories')
+          .select('category_id, resources!inner(user_id)')
+          .eq('resources.user_id', user.id),
+        supabase
+          .from('learning_categories')
+          .select('category_id, learning!inner(user_id)')
+          .eq('learning.user_id', user.id),
+      ]);
+
+      const resourceCounts: Record<string, number> = {};
+      const learningCounts: Record<string, number> = {};
+
+      resourcesResult.data?.forEach(item => {
+        resourceCounts[item.category_id] = (resourceCounts[item.category_id] || 0) + 1;
+      });
+
+      learningResult.data?.forEach(item => {
+        learningCounts[item.category_id] = (learningCounts[item.category_id] || 0) + 1;
+      });
+
+      const combinedStats: Record<string, { resources: number; learning: number }> = {};
+      categories.forEach(category => {
+        combinedStats[category.id] = {
+          resources: resourceCounts[category.id] || 0,
+          learning: learningCounts[category.id] || 0,
+        };
+      });
+
+      setCategoryStats(combinedStats);
+    } catch (error) {
+      console.error('Error fetching category stats:', error);
+    }
+  };
+
+  const fetchTotalStats = async () => {
+    if (!user) return;
+
+    try {
+      const [categoriesResult, subcategoriesResult, tagsResult, resourcesResult, learningResult] = await Promise.all([
+        supabase.from('categories').select('id').eq('user_id', user.id),
+        supabase.from('subcategories').select('id').eq('user_id', user.id),
+        supabase.from('tags').select('id').eq('user_id', user.id),
+        supabase.from('resources').select('id').eq('user_id', user.id),
+        supabase.from('learning').select('id').eq('user_id', user.id),
+      ]);
+
+      setTotalStats({
+        categories: categoriesResult.data?.length || 0,
+        subcategories: subcategoriesResult.data?.length || 0,
+        tags: tagsResult.data?.length || 0,
+        resources: resourcesResult.data?.length || 0,
+        learning: learningResult.data?.length || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching total stats:', error);
+    }
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      const categoryData = {
+        name: categoryFormData.name,
+        description: categoryFormData.description,
+        color: categoryFormData.color,
+        user_id: user.id,
+      };
+
+      if (editingCategory) {
+        // Update existing category
+        const { error } = await supabase
+          .from('categories')
+          .update(categoryData)
+          .eq('id', editingCategory.id);
+
+        if (error) throw error;
+        toast.success('Category updated successfully!');
+      } else {
+        // Create new category
+        const { error } = await supabase
+          .from('categories')
+          .insert([categoryData]);
+
+        if (error) throw error;
+        toast.success('Category created successfully!');
+      }
+
+      // Reset form
+      setCategoryFormData({
+        name: '',
+        description: '',
+        color: '#3B82F6',
+      });
+      setShowCategoryForm(false);
+      setEditingCategory(null);
+      await fetchCategories();
+      await fetchCategoryStats();
+      await fetchTotalStats();
+      bumpTree();
+    } catch (error: any) {
+      console.error('Error saving category:', error);
+      if (error.code === '23505') {
+        toast.error('A category with this name already exists');
+      } else {
+        toast.error('Failed to save category');
+      }
+    }
+  };
+
+  const handleCategoryEdit = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryFormData({
+      name: category.name,
+      description: category.description,
+      color: category.color,
+    });
+    setShowCategoryForm(true);
+  };
+
+  const handleCategoryDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this category? This will remove it from all associated resources and learning items.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Category deleted successfully!');
+      await fetchCategories();
+      await fetchCategoryStats();
+      await fetchTotalStats();
+      bumpTree();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -509,40 +641,206 @@ export default function Taxonomy() {
   }
 
   return (
-    <div className="container-wide space-y-6">
+    <div className="container-wide space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-50">Taxonomy Management</h1>
-          <p className="text-gray-400">Professional hierarchy management for categories, subcategories, and tags</p>
+          <p className="text-gray-400 mt-2">Professional organization system for categories, subcategories, and tags</p>
         </div>
         <button
-          onClick={fetchCategories}
-          className="px-4 py-2 text-sm bg-gray-700 text-gray-200 rounded-lg border border-gray-600 hover:bg-gray-600 transition-colors"
+          onClick={async () => {
+            await fetchCategories();
+            await fetchCategoryStats();
+            await fetchTotalStats();
+            bumpTree();
+          }}
+          className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
         >
-          <Plus className="w-4 h-4 inline mr-2" />
-          Refresh
+          <Activity className="w-4 h-4 inline mr-2" />
+          Refresh All
         </button>
       </div>
 
-      {/* Professional Tree View */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Folder className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-semibold text-gray-100">Taxonomy Hierarchy</h2>
-          </div>
-          <div className="text-sm text-gray-400">
-            Click + to add • Edit/Delete via hover actions
+      {/* Statistics Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 rounded-xl p-6 border border-blue-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-300 text-sm font-medium">Categories</p>
+              <p className="text-2xl font-bold text-blue-100">{totalStats.categories}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+              <Layers className="w-6 h-6 text-blue-400" />
+            </div>
           </div>
         </div>
-        
-        <div className="bg-gradient-to-r from-gray-800/50 to-gray-700/30 rounded-lg p-4 border border-gray-600/30">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+
+        <div className="bg-gradient-to-br from-green-900/20 to-green-800/10 rounded-xl p-6 border border-green-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-300 text-sm font-medium">Subcategories</p>
+              <p className="text-2xl font-bold text-green-100">{totalStats.subcategories}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center">
+              <Folder className="w-6 h-6 text-green-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 rounded-xl p-6 border border-purple-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-300 text-sm font-medium">Tags</p>
+              <p className="text-2xl font-bold text-purple-100">{totalStats.tags}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center">
+              <Hash className="w-6 h-6 text-purple-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-900/20 to-orange-800/10 rounded-xl p-6 border border-orange-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-300 text-sm font-medium">Resources</p>
+              <p className="text-2xl font-bold text-orange-100">{totalStats.resources}</p>
+            </div>
+            <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-orange-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-pink-900/20 to-pink-800/10 rounded-xl p-6 border border-pink-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-pink-300 text-sm font-medium">Learning Items</p>
+              <p className="text-2xl font-bold text-pink-100">{totalStats.learning}</p>
+            </div>
+            <div className="w-12 h-12 bg-pink-600/20 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-pink-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Categories Management Card */}
+        <div className="xl:col-span-1">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-100">Categories</h2>
+                  <p className="text-sm text-gray-400">Manage your main categories</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingCategory(null);
+                  setCategoryFormData({
+                    name: '',
+                    description: '',
+                    color: '#3B82F6',
+                  });
+                  setShowCategoryForm(true);
+                }}
+                className="px-3 py-2 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {categories.map((category) => {
+                const categoryStatsData = categoryStats[category.id] || { resources: 0, learning: 0 };
+                const totalItems = categoryStatsData.resources + categoryStatsData.learning;
+
+                return (
+                  <div key={category.id} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/30 hover:bg-gray-700/70 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3 flex-1">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: category.color }}
+                        >
+                          <Tag className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-100 truncate">
+                            {category.name}
+                          </h3>
+                          {category.description && (
+                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">
+                              {category.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-xs text-blue-400">{categoryStatsData.resources} resources</span>
+                            <span className="text-xs text-green-400">{categoryStatsData.learning} learning</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                        <button
+                          onClick={() => handleCategoryEdit(category)}
+                          className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleCategoryDelete(category.id)}
+                          className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {categories.length === 0 && (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Layers className="w-8 h-8 text-gray-500" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-400 mb-2">No categories yet</h3>
+                <p className="text-xs text-gray-500 mb-4">Create your first category to get started</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Taxonomy Tree Card */}
+        <div className="xl:col-span-2">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-600/20 rounded-lg flex items-center justify-center">
+                  <Folder className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-100">Taxonomy Hierarchy</h2>
+                  <p className="text-sm text-gray-400">Complete organizational structure</p>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                Click + to add • Hover for actions
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-gray-800/50 to-gray-700/30 rounded-lg p-4 border border-gray-600/30 mb-6">
+              <div className="flex items-center gap-2 mb-3">
                 <Search className="w-4 h-4 text-indigo-400" />
-                Global Search
-              </label>
+                <label className="text-sm font-medium text-gray-300">Global Search</label>
+              </div>
               <input
                 value={treeFilter}
                 onChange={(e) => setTreeFilter(e.target.value)}
@@ -550,34 +848,122 @@ export default function Taxonomy() {
                 className="w-full px-4 py-2.5 border border-gray-600 rounded-lg bg-gray-700/80 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
             </div>
-            <div className="flex items-end">
-              <div className="text-sm text-gray-400 space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span><strong className="text-blue-300">Categories:</strong> Add single/bulk tags</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span><strong className="text-green-300">Subcategories:</strong> Copy all tags, add single/bulk</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span><strong className="text-purple-300">Tags:</strong> Copy individual, edit, delete</span>
-                </div>
-              </div>
+
+            <div className="bg-gray-700/30 rounded-lg p-4 max-h-96 overflow-y-auto">
+              <TreeView
+                rootNodes={treeRoots}
+                loadChildren={loadTreeChildren}
+                actionsByType={actionsByType as any}
+                version={treeVersion}
+                filter={treeFilter}
+                className=""
+              />
             </div>
           </div>
         </div>
-
-        <TreeView
-          rootNodes={treeRoots}
-          loadChildren={loadTreeChildren}
-          actionsByType={actionsByType as any}
-          version={treeVersion}
-          filter={treeFilter}
-          className="mt-4"
-        />
       </div>
+
+      {/* Category Form Modal */}
+      {showCategoryForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl max-w-md w-full border border-gray-700">
+            <div className="p-6 border-b border-gray-700 bg-gray-800/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-100">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowCategoryForm(false);
+                    setEditingCategory(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleCategorySubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={categoryFormData.name}
+                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
+                  placeholder="Enter category name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={categoryFormData.description}
+                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
+                  placeholder="Optional description"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Color
+                </label>
+                <div className="flex items-center space-x-3 mb-3">
+                  <input
+                    type="color"
+                    value={categoryFormData.color}
+                    onChange={(e) => setCategoryFormData(prev => ({ ...prev, color: e.target.value }))}
+                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-400">{categoryFormData.color}</span>
+                </div>
+                <div className="grid grid-cols-6 gap-2">
+                  {predefinedColors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setCategoryFormData(prev => ({ ...prev, color }))}
+                      className={`w-8 h-8 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
+                        categoryFormData.color === color 
+                          ? 'border-gray-300 scale-110' 
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCategoryForm(false);
+                    setEditingCategory(null);
+                  }}
+                  className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
+                >
+                  {editingCategory ? 'Update' : 'Create'} Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <TaxonomyModal
         isOpen={modalOpen}

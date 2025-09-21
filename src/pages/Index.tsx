@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, type Learning } from '../lib/supabase';
+import { supabase, type Learning, type Subcategory, getSubcategories } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, GraduationCap, X, ExternalLink, Calendar, Tag as TagIcon, Filter, List, Grid } from 'lucide-react';
 import { TaxonomyManager } from '../components/TaxonomyManager';
@@ -16,12 +16,24 @@ export function Index() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
+  const [allSubcategories, setAllSubcategories] = useState<Subcategory[]>([]);
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchLearning();
+    fetchSubcategories();
   }, [user]);
+
+  const fetchSubcategories = async () => {
+    if (!user) return;
+    try {
+      const subcategories = await getSubcategories(user.id);
+      setAllSubcategories(subcategories);
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+    }
+  };
 
   const fetchLearning = async () => {
     if (!user) return;
@@ -33,6 +45,10 @@ export function Index() {
           learning_categories(
             category_id,
             categories(*)
+          ),
+          learning_subcategories(
+            subcategory_id,
+            subcategories(*)
           )
         `)
         .eq('user_id', user.id)
@@ -40,12 +56,13 @@ export function Index() {
 
       if (error) throw error;
 
-      const learningWithCategories = data?.map(item => ({
+      const learningWithRelations = data?.map(item => ({
         ...item,
         categories: item.learning_categories.map((lc: any) => lc.categories),
+        taxonomySubcategories: item.learning_subcategories.map((ls: any) => ls.subcategories),
       })) || [];
 
-      setLearning(learningWithCategories);
+      setLearning(learningWithRelations);
     } catch (error) {
       console.error('Error fetching learning:', error);
     } finally {
@@ -56,13 +73,37 @@ export function Index() {
   const filteredLearning = learning.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Category filtering: if categories are selected, item must have at least one matching category
     const matchesCategory = selectedCategories.length === 0 || 
                           item.categories?.some(cat => selectedCategories.includes(cat.id));
-    const matchesSubcategory = selectedSubcategories.length === 0 ||
-                              item.subcategories?.some(sub => selectedSubcategories.includes(sub));
+    
+    // Enhanced subcategory filtering: check both legacy and new taxonomy subcategories
+    const matchesSubcategory = selectedSubcategories.length === 0 || (() => {
+      // Check new taxonomy subcategories (preferred)
+      const taxonomyMatch = item.taxonomySubcategories?.some((subcategory: any) => 
+        selectedSubcategories.includes(subcategory.id)
+      );
+      
+      // Fallback: check legacy subcategories by converting IDs to names
+      const legacyMatch = item.subcategories?.some((subcategoryName: string) => {
+        const selectedSubcategoryNames = selectedSubcategories.map(subId => {
+          const subcategory = allSubcategories.find(sub => sub.id === subId);
+          return subcategory?.name;
+        }).filter(Boolean);
+        
+        return selectedSubcategoryNames.includes(subcategoryName);
+      });
+      
+      return taxonomyMatch || legacyMatch;
+    })();
+    
+    // Smart tag filtering: if tags are selected, item must have at least one matching tag
+    // This now properly handles the hierarchical relationship
     const matchesTags = selectedTags.length === 0 ||
                        selectedTags.some(tag => item.tags?.includes(tag));
 
+    // All filters must pass (AND logic)
     return matchesSearch && matchesCategory && matchesSubcategory && matchesTags;
   });
 

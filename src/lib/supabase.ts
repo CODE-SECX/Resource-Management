@@ -62,6 +62,7 @@ export interface Resource {
   created_at: string;
   updated_at: string;
   categories?: Category[];
+  taxonomySubcategories?: Subcategory[];
 }
 
 export interface Learning {
@@ -76,6 +77,7 @@ export interface Learning {
   created_at: string;
   updated_at: string;
   categories?: Category[];
+  taxonomySubcategories?: Subcategory[];
 }
 
 export interface ShareToken {
@@ -766,12 +768,38 @@ export async function upsertTagsByNames(userId: string, subcategoryId: string, n
   if (uniqueNames.length === 0) return [];
 
   const rows = uniqueNames.map(name => ({ user_id: userId, subcategory_id: subcategoryId, name }));
-  const { data, error } = await supabase
-    .from('tags')
-    .upsert(rows, { onConflict: 'user_id,subcategory_id,name' })
-    .select('*');
-  if (error) throw error;
-  return (data || []) as Tag[];
+  
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .upsert(rows, { 
+        onConflict: 'user_id,subcategory_id,name',
+        ignoreDuplicates: false 
+      })
+      .select('*');
+    
+    if (error) throw error;
+    return (data || []) as Tag[];
+  } catch (error: any) {
+    // If there's a constraint violation, try to fetch existing tags instead
+    if (error.code === '23505') {
+      console.warn('Tag constraint violation, fetching existing tags:', error.message);
+      
+      // Fetch existing tags that match our criteria
+      const { data: existingTags, error: fetchError } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('subcategory_id', subcategoryId)
+        .in('name', uniqueNames);
+      
+      if (fetchError) throw fetchError;
+      
+      // Return existing tags or empty array
+      return (existingTags || []) as Tag[];
+    }
+    throw error;
+  }
 }
 
 // Upsert category-level tags by names (no subcategory)
@@ -794,6 +822,23 @@ export async function upsertCategoryTagsByNames(userId: string, categoryId: stri
     
     return (data || []) as Tag[];
   } catch (error: any) {
+    // If there's a constraint violation, try to fetch existing tags instead
+    if (error.code === '23505') {
+      console.warn('Category tag constraint violation, fetching existing tags:', error.message);
+      
+      // Fetch existing tags that match our criteria
+      const { data: existingTags, error: fetchError } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('category_id', categoryId)
+        .in('name', uniqueNames);
+      
+      if (fetchError) throw fetchError;
+      
+      // Return existing tags or empty array
+      return (existingTags || []) as Tag[];
+    }
     throw error;
   }
 }

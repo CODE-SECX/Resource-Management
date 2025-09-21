@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   supabase,
   type Resource,
   type Category,
+  getSubcategories,
   upsertSubcategoriesByNames,
   upsertTagsByNames,
   upsertCategoryTagsByNames,
@@ -13,6 +14,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
+import { SmartTagAssignment } from '../components/SmartTagAssignment';
 import { useSearchParams, Link } from 'react-router-dom';
 
 export function Resources() {
@@ -38,18 +41,21 @@ export function Resources() {
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [filteredTagSuggestions, setFilteredTagSuggestions] = useState<string[]>([]);
   const tagInputRef = useRef<HTMLInputElement>(null);
-  // Subcategory form state
-  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]);
-  const [subcategoryInputValue, setSubcategoryInputValue] = useState('');
-  const [showSubcategorySuggestions, setShowSubcategorySuggestions] = useState(false);
-  const [filteredSubcategorySuggestions, setFilteredSubcategorySuggestions] = useState<string[]>([]);
-  const subcategoryInputRef = useRef<HTMLInputElement>(null);
+  // Subcategory form state - only using ColorCodedSelector now
+  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]); // IDs from ColorCodedSelector
+
+  // Enhanced taxonomy selector state
+  const [availableSubcategoriesWithCategory, setAvailableSubcategoriesWithCategory] = useState<any[]>([]);
+  const [tagAssignments, setTagAssignments] = useState<{
+    tag: string;
+    subcategoryId: string;
+    subcategoryName: string;
+    categoryName: string;
+    categoryColor: string;
+  }[]>([]);
 
   // Get all tags from resources
   const allTags = Array.from(new Set(resources.flatMap(item => item.tags || [])));
-  // Get all subcategories from resources
-  const allFormSubcategories = Array.from(new Set(resources.flatMap(item => item.subcategories || [])));
-
   // Get filtered tags based on selected categories
   const getFilteredTags = () => {
     if (formData.categoryIds.length === 0) {
@@ -66,18 +72,7 @@ export function Resources() {
   };
   const filteredTags = getFilteredTags();
 
-  // Subcategory helpers similar to Tags
-  const getFilteredSubcategories = () => {
-    if (formData.categoryIds.length === 0) {
-      return allFormSubcategories;
-    }
-    return Array.from(new Set(
-      resources
-        .filter(item => formData.categoryIds.length === 0 || item.categories?.some(cat => formData.categoryIds.includes(cat.id)))
-        .flatMap(item => item.subcategories || [])
-    ));
-  };
-  const filteredSubcategories = getFilteredSubcategories();
+  // Note: Subcategory filtering removed - using ColorCodedSubcategorySelector only
 
   // Handle tag input changes and show suggestions
   const handleTagInputChange = (value: string) => {
@@ -103,9 +98,6 @@ export function Resources() {
     const handleClickOutside = (event: MouseEvent) => {
       if (tagInputRef.current && !tagInputRef.current.contains(event.target as Node)) {
         setShowTagSuggestions(false);
-      }
-      if (subcategoryInputRef.current && !subcategoryInputRef.current.contains(event.target as Node)) {
-        setShowSubcategorySuggestions(false);
       }
     };
 
@@ -136,6 +128,74 @@ export function Resources() {
     fetchResources();
     fetchAllCategoriesForForm();
   }, [user]);
+
+  // Enhanced taxonomy logic - fetch subcategories with category info when categories change
+  useEffect(() => {
+    if (!user || formData.categoryIds.length === 0) {
+      setAvailableSubcategoriesWithCategory([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        // Fetch subcategories for selected categories
+        const subLists = await Promise.all(formData.categoryIds.map(id => getSubcategories(user.id, id)));
+        const allSubcats = subLists.flat();
+
+        // Create subcategories with category information for enhanced selector
+        const subcategoriesWithCategory = allSubcats.map(sub => ({
+          ...sub,
+          category: allCategories.find(cat => cat.id === sub.category_id)!
+        }));
+        setAvailableSubcategoriesWithCategory(subcategoriesWithCategory);
+      } catch (error) {
+        console.error('Error fetching enhanced subcategories:', error);
+      }
+    })();
+  }, [user, formData.categoryIds, allCategories]); // Removed selectedFormSubcategoryNames dependency
+
+  // Enhanced taxonomy handlers
+  const handleSubcategoryToggle = (subcategoryId: string) => {
+    setSelectedFormSubcategories(prev => {
+      if (prev.includes(subcategoryId)) {
+        return prev.filter(id => id !== subcategoryId);
+      } else {
+        return [...prev, subcategoryId];
+      }
+    });
+  };
+
+  const handleTagAssignmentAdd = (assignment: {
+    tag: string;
+    subcategoryId: string;
+    subcategoryName: string;
+    categoryName: string;
+    categoryColor: string;
+  }) => {
+    setTagAssignments(prev => {
+      // Check if this tag-subcategory combination already exists
+      const exists = prev.some(a => a.tag === assignment.tag && a.subcategoryId === assignment.subcategoryId);
+      if (!exists) {
+        return [...prev, assignment];
+      }
+      return prev;
+    });
+    
+    // Also add to selectedFormTags if not already there
+    if (!selectedFormTags.includes(assignment.tag)) {
+      setSelectedFormTags(prev => [...prev, assignment.tag]);
+    }
+  };
+
+  const handleTagAssignmentRemove = (tag: string, subcategoryId: string) => {
+    setTagAssignments(prev => prev.filter(a => !(a.tag === tag && a.subcategoryId === subcategoryId)));
+    
+    // Remove from selectedFormTags if no other assignments exist for this tag
+    const hasOtherAssignments = tagAssignments.some(a => a.tag === tag && a.subcategoryId !== subcategoryId);
+    if (!hasOtherAssignments) {
+      setSelectedFormTags(prev => prev.filter(t => t !== tag));
+    }
+  };
 
   const fetchResources = async () => {
     if (!user) return;
@@ -248,26 +308,80 @@ export function Resources() {
       }
 
       // Normalized taxonomy sync (always-on)
-      // 1) Subcategories: upsert for each selected category and link to resource
+      // 1) Subcategories: handle both existing IDs and new names
       let allUpsertedSubcats: { id: string; name: string }[] = [];
-      if (selectedFormSubcategories.length > 0 && formData.categoryIds.length > 0) {
-        const subcatResults = await Promise.all(
-          formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
-        );
-        const subcatsFlat = subcatResults.flat();
-        allUpsertedSubcats = subcatsFlat.map(s => ({ id: s.id, name: s.name }));
+      
+      // Handle existing subcategory IDs (from ColorCodedSelector)
+      if (selectedFormSubcategories.length > 0) {
+        const existingSubcats = selectedFormSubcategories.map(id => {
+          const subcategory = availableSubcategoriesWithCategory.find(sub => sub.id === id);
+          return subcategory ? { id: subcategory.id, name: subcategory.name } : null;
+        }).filter(Boolean) as { id: string; name: string }[];
+        allUpsertedSubcats.push(...existingSubcats);
+      }
+      
+      // Note: Manual subcategory input removed - only using ColorCodedSubcategorySelector now
+      
+      // Link all subcategories to the resource
+      if (allUpsertedSubcats.length > 0) {
         const uniqueSubcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-        if (uniqueSubcatIds.length > 0) {
-          await setResourceSubcategories(resourceId, uniqueSubcatIds);
+        console.log('Saving resource subcategories:', uniqueSubcatIds);
+        
+        // Validate that all subcategories are valid UUIDs (not names)
+        const validSubcategoryIds = uniqueSubcatIds.filter(id => {
+          // Basic UUID format check
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          const isValid = uuidRegex.test(id);
+          if (!isValid) {
+            console.warn('Invalid subcategory ID (possibly a name):', id);
+          }
+          return isValid;
+        });
+        
+        console.log('Valid subcategory IDs:', validSubcategoryIds);
+        
+        if (validSubcategoryIds.length > 0) {
+          try {
+            await setResourceSubcategories(resourceId, validSubcategoryIds);
+            console.log('Resource subcategories saved successfully');
+          } catch (subcatError) {
+            console.error('Error saving resource subcategories:', subcatError);
+            throw subcatError;
+          }
+        } else {
+          console.warn('No valid subcategory IDs to save');
         }
       }
 
-      // 2) Tags: if subcategories chosen, create subcategory-level tags across all upserted subcats;
-      //    otherwise create category-level tags across all selected categories.
-      if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
+      // 2) Enhanced Smart Tags: Use specific tag assignments if available
+      if (tagAssignments.length > 0) {
+        // Use the specific tag assignments created by the user
+        const tagIds: string[] = [];
+        
+        // Group assignments by subcategory
+        const assignmentsBySubcategory = tagAssignments.reduce((acc, assignment) => {
+          if (!acc[assignment.subcategoryId]) {
+            acc[assignment.subcategoryId] = [];
+          }
+          acc[assignment.subcategoryId].push(assignment.tag);
+          return acc;
+        }, {} as Record<string, string[]>);
+
+        // Create tags for each subcategory with their specific assignments
+        for (const [subcategoryId, tags] of Object.entries(assignmentsBySubcategory)) {
+          const tagResults = await upsertTagsByNames(user.id!, subcategoryId, tags);
+          tagIds.push(...tagResults.map(t => t.id));
+        }
+
+        if (tagIds.length > 0) {
+          await setResourceTags(resourceId, Array.from(new Set(tagIds)));
+        }
+      } else if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
+        // Fallback to old logic if no specific assignments
         let tagIds: string[] = [];
+        
         if (selectedFormSubcategories.length > 0) {
-          // Ensure we have subcategories upserted; if not (edge), upsert now per category
+          // Smart association: distribute tags across subcategories
           let subcatIds: string[] = [];
           if (allUpsertedSubcats.length > 0) {
             subcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
@@ -277,7 +391,9 @@ export function Resources() {
             );
             subcatIds = Array.from(new Set(subcatResults.flat().map(s => s.id)));
           }
+          
           if (subcatIds.length > 0) {
+            // Create tags for each subcategory (smart distribution)
             const tagResults = await Promise.all(
               subcatIds.map((subcatId) => upsertTagsByNames(user.id!, subcatId, selectedFormTags))
             );
@@ -305,10 +421,9 @@ export function Resources() {
       });
       setSelectedFormTags([]);
       setSelectedFormSubcategories([]);
+      setTagAssignments([]);
       setTagInputValue('');
-      setSubcategoryInputValue('');
       setShowTagSuggestions(false);
-      setShowSubcategorySuggestions(false);
       setShowForm(false);
       setEditingResource(null);
       fetchResources();
@@ -328,11 +443,18 @@ export function Resources() {
       categoryIds: resource.categories?.map(cat => cat.id) || [],
     });
     setSelectedFormTags(resource.tags);
-    setSelectedFormSubcategories(resource.subcategories || []);
+    
+    // Convert subcategory names to IDs for editing existing items
+    const subcategoryNames = resource.subcategories || [];
+    const subcategoryIds = subcategoryNames.map(name => {
+      const found = availableSubcategoriesWithCategory.find(sub => sub.name === name);
+      return found ? found.id : null;
+    }).filter(id => id !== null) as string[];
+    
+    setSelectedFormSubcategories(subcategoryIds);
+    setTagAssignments([]); // Reset tag assignments for editing
     setTagInputValue('');
-    setSubcategoryInputValue('');
     setShowTagSuggestions(false);
-    setShowSubcategorySuggestions(false);
     setShowForm(true);
   };
 
@@ -606,88 +728,7 @@ export function Resources() {
                   </div>
                 )}
 
-                {/* Category-based subcategory suggestions */}
-                {filteredSubcategories.length > 0 && (
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-400 mb-2">
-                      {formData.categoryIds.length > 0 ? 'Subcategories for selected categories:' : 'All available subcategories:'}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {filteredSubcategories
-                        .filter(sc => !selectedFormSubcategories.includes(sc))
-                        .map((sc) => (
-                          <button
-                            type="button"
-                            key={sc}
-                            onClick={() => setSelectedFormSubcategories(prev => [...prev, sc])}
-                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
-                          >
-                            {sc}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Smart subcategory input with autocomplete */}
-                <div className="relative">
-                  <label className="block text-xs text-gray-400 mb-1">Type to search or add new subcategories</label>
-                  <input
-                    ref={subcategoryInputRef}
-                    type="text"
-                    value={subcategoryInputValue}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSubcategoryInputValue(value);
-                      if (value.trim()) {
-                        const suggestions = filteredSubcategories
-                          .filter(sc => sc.toLowerCase().includes(value.toLowerCase()) && !selectedFormSubcategories.includes(sc))
-                          .slice(0, 5);
-                        setFilteredSubcategorySuggestions(suggestions);
-                        setShowSubcategorySuggestions(suggestions.length > 0);
-                      } else {
-                        setShowSubcategorySuggestions(false);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        const newSc = subcategoryInputValue.trim();
-                        if (newSc && !selectedFormSubcategories.includes(newSc)) {
-                          setSelectedFormSubcategories(prev => [...prev, newSc]);
-                        }
-                        setSubcategoryInputValue('');
-                        setShowSubcategorySuggestions(false);
-                      } else if (e.key === 'Escape') {
-                        setShowSubcategorySuggestions(false);
-                      }
-                    }}
-                    placeholder="Start typing to see suggestions..."
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors bg-gray-700 text-gray-100"
-                  />
-
-                  {/* Subcategory suggestions dropdown */}
-                  {showSubcategorySuggestions && (
-                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredSubcategorySuggestions.map((sc) => (
-                        <button
-                          type="button"
-                          key={sc}
-                          onClick={() => {
-                            if (!selectedFormSubcategories.includes(sc)) {
-                              setSelectedFormSubcategories(prev => [...prev, sc]);
-                            }
-                            setSubcategoryInputValue('');
-                            setShowSubcategorySuggestions(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors"
-                        >
-                          {sc}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Note: Manual subcategory input removed - using ColorCodedSubcategorySelector only */}
               </div>
 
               {allCategories.length > 0 && (
@@ -719,6 +760,33 @@ export function Resources() {
                       </label>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Enhanced Subcategory Selector */}
+              {formData.categoryIds.length > 0 && (
+                <div className="space-y-4">
+                  <ColorCodedSubcategorySelector
+                    availableSubcategories={availableSubcategoriesWithCategory}
+                    selectedSubcategories={selectedFormSubcategories}
+                    onSubcategoryToggle={handleSubcategoryToggle}
+                    selectedCategories={formData.categoryIds}
+                    allCategories={allCategories}
+                  />
+                </div>
+              )}
+
+              {/* Smart Tag Assignment */}
+              {selectedFormSubcategories.length > 0 && (
+                <div className="space-y-4">
+                  <SmartTagAssignment
+                    selectedSubcategories={selectedFormSubcategories}
+                    availableSubcategories={availableSubcategoriesWithCategory}
+                    tagAssignments={tagAssignments}
+                    onTagAssignmentAdd={handleTagAssignmentAdd}
+                    onTagAssignmentRemove={handleTagAssignmentRemove}
+                    availableTags={filteredTags}
+                  />
                 </div>
               )}
 
@@ -755,14 +823,14 @@ export function Resources() {
               className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
-              <Link 
-                to={`/resources/${resource.id}`}
-                className="p-6 block hover:bg-gray-750 transition-colors"
-              >
+              <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-2xl font-semibold text-gray-50 flex-1 mr-3">
+                  <Link 
+                    to={`/resources/${resource.id}`}
+                    className="text-2xl font-semibold text-gray-50 flex-1 mr-3 hover:text-indigo-400 transition-colors"
+                  >
                     {resource.title}
-                  </h3>
+                  </Link>
                   <div className="flex items-center space-x-1 flex-shrink-0">
                     <button
                       onClick={(e) => {
@@ -854,7 +922,7 @@ export function Resources() {
                     {new Date(resource.created_at).toLocaleDateString()}
                   </span>
                 </div>
-              </Link>
+              </div>
             </div>
           );
         })}

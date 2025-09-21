@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, type Category, type Subcategory, type Tag } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Tag as TagIcon, 
   ChevronDown, 
   ChevronRight, 
-  Plus, 
-  Edit3, 
-  Trash2, 
   Check,
   X,
   Folder,
@@ -52,7 +49,6 @@ export function TaxonomyManager({
     try {
       // Fetch categories specific to the type (resources or learning)
       const categoryTable = type === 'resources' ? 'resource_categories' : 'learning_categories';
-      const itemTable = type === 'resources' ? 'resources' : 'learning';
       
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
@@ -117,33 +113,6 @@ export function TaxonomyManager({
     return categories.find(cat => cat.id === categoryId);
   };
 
-  const getAvailableTags = () => {
-    if (selectedCategories.length === 0) {
-      return [];
-    }
-
-    const availableTags = new Set<string>();
-
-    if (selectedSubcategories.length > 0) {
-      // Only show tags that belong to selected subcategories
-      normalizedTags
-        .filter(tag => 
-          tag.subcategory_id && 
-          selectedSubcategories.includes(tag.subcategory_id)
-        )
-        .forEach(tag => availableTags.add(tag.name));
-    } else {
-      // Show all tags from selected categories
-      normalizedTags
-        .filter(tag => 
-          tag.category_id && 
-          selectedCategories.includes(tag.category_id)
-        )
-        .forEach(tag => availableTags.add(tag.name));
-    }
-
-    return Array.from(availableTags).sort();
-  };
 
   const toggleCategoryExpansion = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -158,24 +127,43 @@ export function TaxonomyManager({
   };
 
   const getGroupedSubcategoriesAndTags = () => {
-    const grouped = new Map<string, { category: Category; subcategories: Subcategory[]; tags: string[] }>();
+    const grouped = new Map<string, { 
+      category: Category; 
+      subcategories: Subcategory[]; 
+      categoryLevelTags: string[];
+      subcategoryTags: Map<string, string[]>;
+    }>();
     
     selectedCategories.forEach(categoryId => {
       const category = getCategoryById(categoryId);
       if (!category) return;
 
       const categorySubcategories = getSubcategoriesForCategory(categoryId);
-      const categoryTags = getAvailableTags().filter(tag => {
-        return normalizedTags.some(normalizedTag => 
-          normalizedTag.name === tag && 
-          normalizedTag.category_id === categoryId
-        );
+      
+      // Get category-level tags (tags directly associated with category, not subcategory)
+      const categoryLevelTags = normalizedTags
+        .filter(tag => 
+          tag.category_id === categoryId && 
+          !tag.subcategory_id
+        )
+        .map(tag => tag.name);
+
+      // Get subcategory-level tags grouped by subcategory
+      const subcategoryTags = new Map<string, string[]>();
+      categorySubcategories.forEach(subcategory => {
+        const tagsForSubcategory = normalizedTags
+          .filter(tag => tag.subcategory_id === subcategory.id)
+          .map(tag => tag.name);
+        if (tagsForSubcategory.length > 0) {
+          subcategoryTags.set(subcategory.id, tagsForSubcategory);
+        }
       });
 
       grouped.set(categoryId, {
         category,
         subcategories: categorySubcategories,
-        tags: categoryTags
+        categoryLevelTags,
+        subcategoryTags
       });
     });
 
@@ -267,7 +255,7 @@ export function TaxonomyManager({
       {/* Subcategories and Tags - Only show when categories are selected */}
       {selectedCategories.length > 0 && (
         <div className="space-y-6">
-          {Array.from(getGroupedSubcategoriesAndTags().values()).map(({ category, subcategories: categorySubcategories, tags: categoryTags }) => (
+          {Array.from(getGroupedSubcategoriesAndTags().values()).map(({ category, subcategories: categorySubcategories, categoryLevelTags, subcategoryTags }) => (
             <div key={category.id} className="space-y-4">
               {/* Category Header */}
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/50">
@@ -291,76 +279,116 @@ export function TaxonomyManager({
                 </button>
               </div>
 
-              {/* Subcategories */}
-              {categorySubcategories.length > 0 && expandedCategories.has(category.id) && (
-                <div className="ml-4 space-y-3">
-                  <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
-                    <FolderOpen className="w-3 h-3" />
-                    <span>Subcategories</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {categorySubcategories.map((subcategory) => (
-                      <div
-                        key={subcategory.id}
-                        className={`group relative p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
-                          selectedSubcategories.includes(subcategory.id)
-                            ? 'border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/20'
-                            : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
-                        }`}
-                        onClick={() => onSubcategoryToggle(subcategory.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: subcategory.color || category.color || '#10B981' }}
-                            ></div>
-                            <span className="text-xs font-medium text-slate-300 group-hover:text-emerald-300 transition-colors">
-                              {subcategory.name}
-                            </span>
-                          </div>
-                          {selectedSubcategories.includes(subcategory.id) && (
-                            <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                              <Check className="w-2.5 h-2.5 text-white" />
+              {expandedCategories.has(category.id) && (
+                <div className="ml-4 space-y-4">
+                  {/* Category-level Tags */}
+                  {categoryLevelTags.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
+                        <Hash className="w-3 h-3" />
+                        <span>Category Tags</span>
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {categoryLevelTags.map((tag: string) => (
+                          <div
+                            key={tag}
+                            className={`group relative px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
+                              selectedTags.includes(tag)
+                                ? 'border-indigo-500 bg-indigo-500/10 shadow-md shadow-indigo-500/20'
+                                : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                            }`}
+                            onClick={() => onTagToggle(tag)}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <TagIcon className="w-3 h-3 text-slate-400" />
+                              <span className="text-xs font-medium text-slate-300 group-hover:text-indigo-300 transition-colors">
+                                {tag}
+                              </span>
+                              {selectedTags.includes(tag) && (
+                                <Check className="w-3 h-3 text-indigo-500" />
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {/* Tags */}
-              {categoryTags.length > 0 && expandedCategories.has(category.id) && (
-                <div className="ml-4 space-y-3">
-                  <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
-                    <Hash className="w-3 h-3" />
-                    <span>Tags</span>
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {categoryTags.map((tag) => (
-                      <div
-                        key={tag}
-                        className={`group relative px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
-                          selectedTags.includes(tag)
-                            ? 'border-indigo-500 bg-indigo-500/10 shadow-md shadow-indigo-500/20'
-                            : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
-                        }`}
-                        onClick={() => onTagToggle(tag)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <TagIcon className="w-3 h-3 text-slate-400" />
-                          <span className="text-xs font-medium text-slate-300 group-hover:text-indigo-300 transition-colors">
-                            {tag}
-                          </span>
-                          {selectedTags.includes(tag) && (
-                            <Check className="w-3 h-3 text-indigo-500" />
-                          )}
-                        </div>
+                  {/* Subcategories */}
+                  {categorySubcategories.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
+                        <FolderOpen className="w-3 h-3" />
+                        <span>Subcategories</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {categorySubcategories.map((subcategory) => (
+                          <div key={subcategory.id} className="space-y-2">
+                            {/* Subcategory Header */}
+                            <div
+                              className={`group relative p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
+                                selectedSubcategories.includes(subcategory.id)
+                                  ? 'border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/20'
+                                  : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                              }`}
+                              onClick={() => onSubcategoryToggle(subcategory.id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: subcategory.color || category.color || '#10B981' }}
+                                  ></div>
+                                  <span className="text-xs font-medium text-slate-300 group-hover:text-emerald-300 transition-colors">
+                                    {subcategory.name}
+                                  </span>
+                                  {subcategoryTags.has(subcategory.id) && (
+                                    <span className="text-xs text-slate-500">
+                                      ({subcategoryTags.get(subcategory.id)?.length} tags)
+                                    </span>
+                                  )}
+                                </div>
+                                {selectedSubcategories.includes(subcategory.id) && (
+                                  <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                                    <Check className="w-2.5 h-2.5 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Subcategory Tags */}
+                            {subcategoryTags.has(subcategory.id) && (
+                              <div className="ml-4 pl-4 border-l border-slate-600/30">
+                                <div className="flex flex-wrap gap-1">
+                                  {subcategoryTags.get(subcategory.id)?.map((tag: string) => (
+                                    <div
+                                      key={`${subcategory.id}-${tag}`}
+                                      className={`group relative px-2 py-1 rounded-md border transition-all duration-200 cursor-pointer text-xs ${
+                                        selectedTags.includes(tag)
+                                          ? 'border-indigo-400 bg-indigo-400/10 shadow-sm shadow-indigo-400/20'
+                                          : 'border-slate-600/40 hover:border-slate-500 bg-slate-800/20 hover:bg-slate-800/40'
+                                      }`}
+                                      onClick={() => onTagToggle(tag)}
+                                    >
+                                      <div className="flex items-center space-x-1">
+                                        <TagIcon className="w-2.5 h-2.5 text-slate-500" />
+                                        <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
+                                          {tag}
+                                        </span>
+                                        {selectedTags.includes(tag) && (
+                                          <Check className="w-2.5 h-2.5 text-indigo-400" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

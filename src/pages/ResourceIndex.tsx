@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, type Resource } from '../lib/supabase';
+import { supabase, type Resource, type Subcategory, getSubcategories } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, ExternalLink, X, Filter, Calendar, Tag as TagIcon, List, Grid } from 'lucide-react';
 import { TaxonomyManager } from '../components/TaxonomyManager';
@@ -16,10 +16,22 @@ export function ResourceIndex() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
+  const [allSubcategories, setAllSubcategories] = useState<Subcategory[]>([]);
 
   useEffect(() => {
     fetchResources();
+    fetchSubcategories();
   }, [user]);
+
+  const fetchSubcategories = async () => {
+    if (!user) return;
+    try {
+      const subcategories = await getSubcategories(user.id);
+      setAllSubcategories(subcategories);
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+    }
+  };
 
   const fetchResources = async () => {
     if (!user) return;
@@ -31,6 +43,10 @@ export function ResourceIndex() {
           resource_categories(
             category_id,
             categories(*)
+          ),
+          resource_subcategories(
+            subcategory_id,
+            subcategories(*)
           )
         `)
         .eq('user_id', user.id)
@@ -38,12 +54,13 @@ export function ResourceIndex() {
 
       if (error) throw error;
 
-      const resourcesWithCategories = data?.map(resource => ({
+      const resourcesWithRelations = data?.map(resource => ({
         ...resource,
         categories: resource.resource_categories.map((rc: any) => rc.categories),
+        taxonomySubcategories: resource.resource_subcategories.map((rs: any) => rs.subcategories),
       })) || [];
 
-      setResources(resourcesWithCategories);
+      setResources(resourcesWithRelations);
     } catch (error) {
       console.error('Error fetching resources:', error);
     } finally {
@@ -56,8 +73,27 @@ export function ResourceIndex() {
                          item.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategories.length === 0 || 
                           item.categories?.some(cat => selectedCategories.includes(cat.id));
-    const matchesSubcategory = selectedSubcategories.length === 0 ||
-                              item.subcategories?.some(sub => selectedSubcategories.includes(sub));
+    
+    // Enhanced subcategory filtering: check both legacy and new taxonomy subcategories
+    const matchesSubcategory = selectedSubcategories.length === 0 || (() => {
+      // Check new taxonomy subcategories (preferred)
+      const taxonomyMatch = item.taxonomySubcategories?.some((subcategory: any) => 
+        selectedSubcategories.includes(subcategory.id)
+      );
+      
+      // Fallback: check legacy subcategories by converting IDs to names
+      const legacyMatch = item.subcategories?.some((subcategoryName: string) => {
+        const selectedSubcategoryNames = selectedSubcategories.map(subId => {
+          const subcategory = allSubcategories.find(sub => sub.id === subId);
+          return subcategory?.name;
+        }).filter(Boolean);
+        
+        return selectedSubcategoryNames.includes(subcategoryName);
+      });
+      
+      return taxonomyMatch || legacyMatch;
+    })();
+    
     const matchesTags = selectedTags.length === 0 ||
                        selectedTags.some(tag => item.tags?.includes(tag));
 

@@ -13,24 +13,28 @@ import {
   setLearningTags,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, ExternalLink, Tag, X, GraduationCap, Grid, LayoutList } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, GraduationCap, Grid, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
-import { SmartTagAssignment } from '../components/SmartTagAssignment';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+
 const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
 export function Learning() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [learning, setLearning] = useState<Learning[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Learning | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedSubcategoryFilters, setSelectedSubcategoryFilters] = useState<string[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -46,8 +50,12 @@ export function Learning() {
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [filteredTagSuggestions, setFilteredTagSuggestions] = useState<string[]>([]);
   const tagInputRef = useRef<HTMLInputElement>(null);
-  // Subcategory form state - only using ColorCodedSelector now
-  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]); // IDs from ColorCodedSelector
+  // Subcategory form state
+  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]);
+  const [subcategoryInputValue, setSubcategoryInputValue] = useState('');
+  const [showSubcategorySuggestions, setShowSubcategorySuggestions] = useState(false);
+  const [filteredSubcategorySuggestions, setFilteredSubcategorySuggestions] = useState<string[]>([]);
+  const subcategoryInputRef = useRef<HTMLInputElement>(null);
 
   // Get all tags from learning items (legacy) for form
   const allFormTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
@@ -57,16 +65,6 @@ export function Learning() {
   // Normalized taxonomy suggestions
   const [taxonomySubcategoryNames, setTaxonomySubcategoryNames] = useState<string[]>([]);
   const [taxonomyTagNames, setTaxonomyTagNames] = useState<string[]>([]);
-
-  // Enhanced taxonomy selector state
-  const [availableSubcategoriesWithCategory, setAvailableSubcategoriesWithCategory] = useState<any[]>([]);
-  const [tagAssignments, setTagAssignments] = useState<{
-    tag: string;
-    subcategoryId: string;
-    subcategoryName: string;
-    categoryName: string;
-    categoryColor: string;
-  }[]>([]);
 
   // Fetch taxonomy-based suggestions whenever categories selection changes
   useEffect(() => {
@@ -80,7 +78,6 @@ export function Learning() {
           // All subcategories and tags across all categories
           const subs = await getSubcategories(user.id);
           subcatNames = subs.map(s => s.name);
-          setAvailableSubcategoriesWithCategory([]);
 
           // For tags across all categories: aggregate category-level + subcategory-level
           // Use allCategories (already fetched for form) to avoid an extra query
@@ -94,19 +91,11 @@ export function Learning() {
             tagNames = Array.from(new Set([...catTagRows, ...subTagRows].map(t => t.name)));
           }
         } else {
-          // Filtered by selected categories - Enhanced for color-coded display
+          // Filtered by selected categories
           const subLists = await Promise.all(formData.categoryIds.map(id => getSubcategories(user.id, id)));
-          const allSubcats = subLists.flat();
-          subcatNames = Array.from(new Set(allSubcats.map(s => s.name)));
+          subcatNames = Array.from(new Set(subLists.flat().map(s => s.name)));
 
-          // Create subcategories with category information for enhanced selector
-          const subcategoriesWithCategory = allSubcats.map(sub => ({
-            ...sub,
-            category: allCategories.find(cat => cat.id === sub.category_id)!
-          }));
-          setAvailableSubcategoriesWithCategory(subcategoriesWithCategory);
-
-          const subIds = Array.from(new Set(allSubcats.map(s => s.id)));
+          const subIds = Array.from(new Set(subLists.flat().map(s => s.id)));
           const catTagRowsNested = await Promise.all(formData.categoryIds.map(id => getTagsByCategory(user.id, id)));
           const catTagRows = catTagRowsNested.flat();
           const subTagRows = subIds.length ? await getTagsForSubcategories(user.id, subIds) : [];
@@ -119,7 +108,7 @@ export function Learning() {
         console.error('Failed to fetch taxonomy suggestions', e);
       }
     })();
-  }, [user, formData.categoryIds, allCategories]); // Refresh when categories change
+  }, [user, formData.categoryIds, allCategories]);
 
   // Suggested tags: merge normalized taxonomy tags with legacy tags from existing learning
   // Legacy tags scoped to selected categories (fallback when taxonomy isn't backfilled yet)
@@ -136,49 +125,6 @@ export function Learning() {
     const merged = new Set<string>([...taxonomyTagNames, ...legacyTagsForSelected]);
     return Array.from(merged);
   }, [taxonomyTagNames, legacyTagsForSelected]);
-
-  // Enhanced taxonomy handlers
-  const handleSubcategoryToggle = (subcategoryId: string) => {
-    setSelectedFormSubcategories(prev => {
-      if (prev.includes(subcategoryId)) {
-        return prev.filter(id => id !== subcategoryId);
-      } else {
-        return [...prev, subcategoryId];
-      }
-    });
-  };
-
-  const handleTagAssignmentAdd = (assignment: {
-    tag: string;
-    subcategoryId: string;
-    subcategoryName: string;
-    categoryName: string;
-    categoryColor: string;
-  }) => {
-    setTagAssignments(prev => {
-      // Check if this tag-subcategory combination already exists
-      const exists = prev.some(a => a.tag === assignment.tag && a.subcategoryId === assignment.subcategoryId);
-      if (!exists) {
-        return [...prev, assignment];
-      }
-      return prev;
-    });
-    
-    // Also add to selectedFormTags if not already there
-    if (!selectedFormTags.includes(assignment.tag)) {
-      setSelectedFormTags(prev => [...prev, assignment.tag]);
-    }
-  };
-
-  const handleTagAssignmentRemove = (tag: string, subcategoryId: string) => {
-    setTagAssignments(prev => prev.filter(a => !(a.tag === tag && a.subcategoryId === subcategoryId)));
-    
-    // Remove from selectedFormTags if no other assignments exist for this tag
-    const hasOtherAssignments = tagAssignments.some(a => a.tag === tag && a.subcategoryId !== subcategoryId);
-    if (!hasOtherAssignments) {
-      setSelectedFormTags(prev => prev.filter(t => t !== tag));
-    }
-  };
 
   // Add tag from suggestions
   const addTagFromSuggestion = (tag: string) => {
@@ -241,6 +187,9 @@ export function Learning() {
       if (tagInputRef.current && !tagInputRef.current.contains(event.target as Node)) {
         setShowTagSuggestions(false);
       }
+      if (subcategoryInputRef.current && !subcategoryInputRef.current.contains(event.target as Node)) {
+        setShowSubcategorySuggestions(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -268,6 +217,7 @@ export function Learning() {
 
   useEffect(() => {
     fetchLearning();
+    fetchCategories();
     fetchAllCategoriesForForm();
   }, [user]);
 
@@ -303,6 +253,43 @@ export function Learning() {
     }
   };
 
+  const fetchCategories = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch only categories that have learning items
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          learning_categories!inner(
+            learning_id
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+
+      // Remove duplicates and format data
+      const uniqueCategories = data?.reduce((acc, item) => {
+        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
+          acc.push({
+            id: item.id,
+            name: item.name,
+            color: item.color,
+            user_id: item.user_id,
+            created_at: item.created_at
+          });
+        }
+        return acc;
+      }, [] as Category[]) || [];
+
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchAllCategoriesForForm = async () => {
     if (!user) return;
@@ -383,69 +370,36 @@ export function Learning() {
       }
 
       // Normalized taxonomy sync (always-on)
-      // 1) Subcategories: handle selected IDs from ColorCodedSelector
-      if (selectedFormSubcategories.length > 0) {
-        console.log('Saving subcategories:', selectedFormSubcategories);
-        
-        // Validate that all subcategories are valid UUIDs (not names)
-        const validSubcategoryIds = selectedFormSubcategories.filter(id => {
-          // Basic UUID format check
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          const isValid = uuidRegex.test(id);
-          if (!isValid) {
-            console.warn('Invalid subcategory ID (possibly a name):', id);
-          }
-          return isValid;
-        });
-        
-        console.log('Valid subcategory IDs:', validSubcategoryIds);
-        
-        if (validSubcategoryIds.length > 0) {
-          try {
-            await setLearningSubcategories(learningId, validSubcategoryIds);
-            console.log('Subcategories saved successfully');
-          } catch (subcatError) {
-            console.error('Error saving subcategories:', subcatError);
-            throw subcatError;
-          }
-        } else {
-          console.warn('No valid subcategory IDs to save');
+      // 1) Subcategories: upsert for each selected category and link to learning
+      let allUpsertedSubcats: { id: string; name: string }[] = [];
+      if (selectedFormSubcategories.length > 0 && formData.categoryIds.length > 0) {
+        const subcatResults = await Promise.all(
+          formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
+        );
+        const subcatsFlat = subcatResults.flat();
+        allUpsertedSubcats = subcatsFlat.map(s => ({ id: s.id, name: s.name }));
+        const uniqueSubcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
+        if (uniqueSubcatIds.length > 0) {
+          await setLearningSubcategories(learningId, uniqueSubcatIds);
         }
       }
 
-          // 2) Enhanced Smart Tags: Use specific tag assignments if available
-      if (tagAssignments.length > 0) {
-        // Use the specific tag assignments created by the user
-        const tagIds: string[] = [];
-        
-        // Group assignments by subcategory
-        const assignmentsBySubcategory = tagAssignments.reduce((acc, assignment) => {
-          if (!acc[assignment.subcategoryId]) {
-            acc[assignment.subcategoryId] = [];
-          }
-          acc[assignment.subcategoryId].push(assignment.tag);
-          return acc;
-        }, {} as Record<string, string[]>);
-
-        // Create tags for each subcategory with their specific assignments
-        for (const [subcategoryId, tags] of Object.entries(assignmentsBySubcategory)) {
-          const tagResults = await upsertTagsByNames(user.id!, subcategoryId, tags);
-          tagIds.push(...tagResults.map(t => t.id));
-        }
-
-        if (tagIds.length > 0) {
-          await setLearningTags(learningId, Array.from(new Set(tagIds)));
-        }
-      } else if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
-        // Fallback to old logic if no specific assignments
+      // 2) Tags: if subcategories chosen, create subcategory-level tags across all upserted subcats;
+      //    otherwise create category-level tags across all selected categories.
+      if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
         let tagIds: string[] = [];
-        
         if (selectedFormSubcategories.length > 0) {
-          // Smart association: distribute tags across selected subcategories
-          const subcatIds = selectedFormSubcategories;
-          
+          // Ensure we have subcategories upserted; if not (edge), upsert now per category
+          let subcatIds: string[] = [];
+          if (allUpsertedSubcats.length > 0) {
+            subcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
+          } else {
+            const subcatResults = await Promise.all(
+              formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
+            );
+            subcatIds = Array.from(new Set(subcatResults.flat().map(s => s.id)));
+          }
           if (subcatIds.length > 0) {
-            // Create tags for each subcategory (smart distribution)
             const tagResults = await Promise.all(
               subcatIds.map((subcatId) => upsertTagsByNames(user.id!, subcatId, selectedFormTags))
             );
@@ -458,7 +412,6 @@ export function Learning() {
           );
           tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
         }
-        
         if (tagIds.length > 0) {
           await setLearningTags(learningId, tagIds);
         }
@@ -475,9 +428,10 @@ export function Learning() {
       });
       setSelectedFormTags([]);
       setSelectedFormSubcategories([]);
-      setTagAssignments([]);
       setTagInputValue('');
+      setSubcategoryInputValue('');
       setShowTagSuggestions(false);
+      setShowSubcategorySuggestions(false);
       setShowForm(false);
       setEditingItem(null);
       fetchLearning();
@@ -498,18 +452,11 @@ export function Learning() {
       categoryIds: item.categories?.map(cat => cat.id) || [],
     });
     setSelectedFormTags(item.tags);
-    
-    // Convert subcategory names to IDs for editing existing items
-    const subcategoryNames = item.subcategories || [];
-    const subcategoryIds = subcategoryNames.map(name => {
-      const found = availableSubcategoriesWithCategory.find(sub => sub.name === name);
-      return found ? found.id : null;
-    }).filter(id => id !== null) as string[];
-    
-    setSelectedFormSubcategories(subcategoryIds);
-    setTagAssignments([]); // Reset tag assignments for editing
+    setSelectedFormSubcategories(item.subcategories || []);
     setTagInputValue('');
+    setSubcategoryInputValue('');
     setShowTagSuggestions(false);
+    setShowSubcategorySuggestions(false);
     setShowForm(true);
   };
 
@@ -548,12 +495,32 @@ export function Learning() {
     }
   };
 
+  // Get all unique tags from learning items
+  const allTags = Array.from(new Set(learning.flatMap(item => item.tags)));
+  // Get all unique subcategories from learning items
+  const allSubcategories = Array.from(new Set(learning.flatMap(item => item.subcategories || [])));
 
   // Filter learning items
   const filteredLearning = learning.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+
+    const matchesCategories = selectedCategories.length === 0 ||
+                             item.categories?.some(cat => selectedCategories.includes(cat.id));
+
+    const matchesTags = selectedTags.length === 0 ||
+                       selectedTags.some(tag => item.tags.includes(tag));
+    const matchesSubcategories = selectedSubcategoryFilters.length === 0 ||
+                          selectedSubcategoryFilters.some(sc => (item.subcategories || []).includes(sc));
+
+    const matchesDifficulty = selectedDifficulty.length === 0 ||
+                             selectedDifficulty.includes(item.difficulty_level);
+
+    const matchesDate = (!dateRange.start && !dateRange.end) ||
+                       ((!dateRange.start || new Date(item.created_at) >= new Date(dateRange.start)) &&
+                        (!dateRange.end || new Date(item.created_at) <= new Date(dateRange.end)));
+
+    return matchesSearch && matchesCategories && matchesTags && matchesSubcategories && matchesDifficulty && matchesDate;
   });
 
   if (loading) {
@@ -612,18 +579,186 @@ export function Learning() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search learning items..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-3 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-          />
+      {/* Filters */}
+      <div className="bg-gray-800 rounded-lg p-6 mb-6 space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search learning items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-300">Filters:</span>
+          </div>
         </div>
+
+        {/* Difficulty filters */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-300 mb-2">Difficulty Level</h4>
+          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            {difficultyLevels.map((level) => (
+              <button
+                key={level}
+                onClick={() => {
+                  setSelectedDifficulty(prev =>
+                    prev.includes(level)
+                      ? prev.filter(d => d !== level)
+                      : [...prev, level]
+                  );
+                }}
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
+                  selectedDifficulty.includes(level)
+                    ? getDifficultyColor(level)
+                    : 'text-gray-300 border-gray-600 hover:bg-gray-700'
+                }`}
+              >
+                {level}
+                {selectedDifficulty.includes(level) && (
+                  <X className="ml-1 w-3 h-3" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-300 mb-2">Date Range</h4>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">From</label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">To</label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-sm bg-gray-700 text-gray-100"
+              />
+            </div>
+            {(dateRange.start || dateRange.end) && (
+              <button
+                onClick={() => setDateRange({ start: '', end: '' })}
+                className="mt-5 p-2 text-gray-400 hover:text-red-400 transition-colors"
+                title="Clear date filter"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Category filters */}
+        {categories.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Categories</h4>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => {
+                    setSelectedCategories(prev =>
+                      prev.includes(category.id)
+                        ? prev.filter(id => id !== category.id)
+                        : [...prev, category.id]
+                    );
+                  }}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    selectedCategories.includes(category.id)
+                      ? 'text-white'
+                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
+                  }`}
+                  style={{
+                    backgroundColor: selectedCategories.includes(category.id) ? category.color : undefined,
+                  }}
+                >
+                  {category.name}
+                  {selectedCategories.includes(category.id) && (
+                    <X className="ml-1 w-3 h-3" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tag filters */}
+        {allTags.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Tags</h4>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setSelectedTags(prev =>
+                      prev.includes(tag)
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
+                  }}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    selectedTags.includes(tag)
+                      ? 'bg-indigo-600 text-white border border-indigo-500'
+                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
+                  }`}
+                >
+                  <Tag className="mr-1 w-3 h-3" />
+                  {tag}
+                  {selectedTags.includes(tag) && (
+                    <X className="ml-1 w-3 h-3" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Subcategory filters */}
+        {allSubcategories.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Subcategories</h4>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {allSubcategories.map((sc) => (
+                <button
+                  key={sc}
+                  onClick={() => {
+                    setSelectedSubcategoryFilters(prev =>
+                      prev.includes(sc)
+                        ? prev.filter(s => s !== sc)
+                        : [...prev, sc]
+                    );
+                  }}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    selectedSubcategoryFilters.includes(sc)
+                      ? 'bg-purple-600 text-white border border-purple-500'
+                      : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
+                  }`}
+                >
+                  {sc}
+                  {selectedSubcategoryFilters.includes(sc) && (
+                    <X className="ml-1 w-3 h-3" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Learning Form Modal */}
@@ -764,29 +899,136 @@ export function Learning() {
                           {tag}
                         </button>
                       ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Subcategories input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Subcategories</label>
+
+                {/* Selected subcategories display */}
+                {selectedFormSubcategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedFormSubcategories.map((sc) => (
+                      <button
+                        key={sc}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFormSubcategories(prev => prev.filter(s => s !== sc));
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-600 text-white border border-purple-500 transition-colors"
+                      >
+                        {sc}
+                        <X className="ml-1 w-3 h-3" />
+                      </button>
+                    ))}
                   </div>
-              )}
+                )}
+
+                {/* Category-based subcategory suggestions */}
+                {filteredSubcategories.length > 0 && (
+                  <div className="mb-3">
+                    <label className="block text-xs text-gray-400 mb-1">
+                      {formData.categoryIds.length > 0 ? 'Relevant subcategories for selected categories' : 'All available subcategories'}
+                    </label>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {filteredSubcategories
+                        .filter(sc => !selectedFormSubcategories.includes(sc))
+                        .map((sc) => (
+                          <button
+                            key={sc}
+                            type="button"
+                            onClick={() => setSelectedFormSubcategories(prev => [...prev, sc])}
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
+                          >
+                            {sc}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Smart subcategory input with autocomplete */}
+                <div className="relative">
+                  <label className="block text-xs text-gray-400 mb-1">Type to search or add new subcategories</label>
+                  <input
+                    ref={subcategoryInputRef}
+                    type="text"
+                    value={subcategoryInputValue}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSubcategoryInputValue(value);
+                      if (value.trim()) {
+                        const suggestions = filteredSubcategories
+                          .filter(sc => sc.toLowerCase().includes(value.toLowerCase()) && !selectedFormSubcategories.includes(sc))
+                          .slice(0, 5);
+                        setFilteredSubcategorySuggestions(suggestions);
+                        setShowSubcategorySuggestions(suggestions.length > 0);
+                      } else {
+                        setShowSubcategorySuggestions(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        const newSc = subcategoryInputValue.trim();
+                        if (newSc && !selectedFormSubcategories.includes(newSc)) {
+                          setSelectedFormSubcategories(prev => [...prev, newSc]);
+                        }
+                        setSubcategoryInputValue('');
+                        setShowSubcategorySuggestions(false);
+                      } else if (e.key === 'Escape') {
+                        setShowSubcategorySuggestions(false);
+                      }
+                    }}
+                    placeholder="Start typing to see suggestions..."
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors bg-gray-700 text-gray-100"
+                  />
+
+                  {/* Subcategory suggestions dropdown */}
+                  {showSubcategorySuggestions && (
+                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredSubcategorySuggestions.map((sc) => (
+                        <button
+                          key={sc}
+                          type="button"
+                          onClick={() => {
+                            if (!selectedFormSubcategories.includes(sc)) {
+                              setSelectedFormSubcategories(prev => [...prev, sc]);
+                            }
+                            setSubcategoryInputValue('');
+                            setShowSubcategorySuggestions(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+                        >
+                          {sc}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {allCategories.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Categories
-                </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
-                  {allCategories.map((category) => (
-                    <label key={category.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.categoryIds.includes(category.id)}
-                        onChange={(e) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            categoryIds: e.target.checked
-                              ? [...prev.categoryIds, category.id]
-                              : prev.categoryIds.filter(id => id !== category.id),
-                          }));
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Categories
+                  </label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
+                    {allCategories.map((category) => (
+                      <label key={category.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.categoryIds.includes(category.id)}
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              categoryIds: e.target.checked
+                                ? [...prev.categoryIds, category.id]
+                                : prev.categoryIds.filter(id => id !== category.id),
+                            }));
                           }}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
@@ -798,33 +1040,6 @@ export function Learning() {
                       </label>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Enhanced Subcategory Selector */}
-              {formData.categoryIds.length > 0 && (
-                <div className="space-y-4">
-                  <ColorCodedSubcategorySelector
-                    availableSubcategories={availableSubcategoriesWithCategory}
-                    selectedSubcategories={selectedFormSubcategories}
-                    onSubcategoryToggle={handleSubcategoryToggle}
-                    selectedCategories={formData.categoryIds}
-                    allCategories={allCategories}
-                  />
-                </div>
-              )}
-
-              {/* Smart Tag Assignment */}
-              {selectedFormSubcategories.length > 0 && (
-                <div className="space-y-4">
-                  <SmartTagAssignment
-                    selectedSubcategories={selectedFormSubcategories}
-                    availableSubcategories={availableSubcategoriesWithCategory}
-                    tagAssignments={tagAssignments}
-                    onTagAssignmentAdd={handleTagAssignmentAdd}
-                    onTagAssignmentRemove={handleTagAssignmentRemove}
-                    availableTags={suggestedTags}
-                  />
                 </div>
               )}
 
@@ -862,24 +1077,21 @@ export function Learning() {
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : item.id)}
             >
               <div
-                role="button"
-                tabIndex={0}
                 className="p-6 block hover:bg-gray-750 transition-colors"
                 onClick={(e) => {
+                  // Prevent parent card click from toggling expand state
                   e.stopPropagation();
-                  navigate(`/learning/${item.id}`);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigate(`/learning/${item.id}`);
-                  }
                 }}
               >
+
                 <div className="flex items-start justify-between mb-4">
                   <h2 className="text-2xl font-semibold text-gray-50 flex-1 mr-3">
-                    {item.title}
+                    <Link
+                      to={`/learning/${item.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {item.title}
+                    </Link>
                   </h2>
                   <div className="flex items-center space-x-1 flex-shrink-0">
                     <button
@@ -913,11 +1125,8 @@ export function Learning() {
 
                 {item.description && (
                   <div 
-                    className="text-sm mb-3 line-clamp-3 rich-content"
+                    className="text-gray-300 text-sm mb-3 line-clamp-3"
                     dangerouslySetInnerHTML={{ __html: item.description }}
-                    style={{
-                      color: '#d1d5db',
-                    }}
                   />
                 )}
 

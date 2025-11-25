@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+
 import { supabase, type Learning, type Subcategory, getSubcategories } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, GraduationCap, X, ExternalLink, Calendar, Tag as TagIcon, Filter, List, Grid } from 'lucide-react';
 import { TaxonomyManager } from '../components/TaxonomyManager';
 
-
 export function Index() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [learning, setLearning] = useState<Learning[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -17,7 +16,6 @@ export function Index() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
   const [allSubcategories, setAllSubcategories] = useState<Subcategory[]>([]);
-  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -268,10 +266,10 @@ export function Index() {
             {viewMode === 'card' ? (
               <div className="space-y-4">
                 {filteredLearning.map((item) => (
-                  <div
+                  <Link
                     key={item.id}
-                    onClick={() => navigate(`/learning/${item.id}`)}
-                    className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
+                    to={`/learning/${item.id}`}
+                    className="group block bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
                   >
                     <div className="p-6">
                       <div className="flex items-start gap-6">
@@ -372,7 +370,7 @@ export function Index() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -380,10 +378,10 @@ export function Index() {
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="divide-y divide-slate-700">
                   {filteredLearning.map((item) => (
-                    <div 
+                    <Link 
                       key={item.id} 
-                      className="px-6 py-4 hover:bg-slate-750 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/learning/${item.id}`)}
+                      to={`/learning/${item.id}`}
+                      className="block px-6 py-4 hover:bg-slate-750 transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
@@ -395,7 +393,7 @@ export function Index() {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

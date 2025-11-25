@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+
 import { supabase, type Resource, type Subcategory, getSubcategories } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, ExternalLink, X, Filter, Calendar, Tag as TagIcon, List, Grid } from 'lucide-react';
@@ -8,7 +9,6 @@ import { TaxonomyManager } from '../components/TaxonomyManager';
 export function ResourceIndex() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -261,10 +261,10 @@ export function ResourceIndex() {
             {viewMode === 'card' ? (
               <div className="space-y-4">
                 {filteredResources.map((item) => (
-                  <div
+                  <Link
                     key={item.id}
-                    onClick={() => navigate(`/resources/${item.id}`)}
-                    className="group bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
+                    to={`/resources/${item.id}`}
+                    className="group block bg-slate-800 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-750 transition-all duration-200 cursor-pointer"
                   >
                     <div className="p-6">
                       <div className="flex items-start gap-6">
@@ -365,7 +365,7 @@ export function ResourceIndex() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -373,10 +373,10 @@ export function ResourceIndex() {
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="divide-y divide-slate-700">
                   {filteredResources.map((item) => (
-                    <div 
+                    <Link 
                       key={item.id} 
-                      className="px-6 py-4 hover:bg-slate-750 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/resources/${item.id}`)}
+                      to={`/resources/${item.id}`}
+                      className="block px-6 py-4 hover:bg-slate-750 transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
@@ -388,7 +388,7 @@ export function ResourceIndex() {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

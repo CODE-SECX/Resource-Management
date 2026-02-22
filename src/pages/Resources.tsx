@@ -11,7 +11,7 @@ import {
   setResourceTags,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, ExternalLink, Tag, X, Grid, LayoutList } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Tag, X, Grid, LayoutList, BookOpen, ArrowUpRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
@@ -41,10 +41,8 @@ export function Resources() {
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [filteredTagSuggestions, setFilteredTagSuggestions] = useState<string[]>([]);
   const tagInputRef = useRef<HTMLInputElement>(null);
-  // Subcategory form state - only using ColorCodedSelector now
-  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]); // IDs from ColorCodedSelector
+  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]);
 
-  // Enhanced taxonomy selector state
   const [availableSubcategoriesWithCategory, setAvailableSubcategoriesWithCategory] = useState<any[]>([]);
   const [tagAssignments, setTagAssignments] = useState<{
     tag: string;
@@ -54,17 +52,13 @@ export function Resources() {
     categoryColor: string;
   }[]>([]);
 
-  // Get all tags from resources
   const allTags = Array.from(new Set(resources.flatMap(item => item.tags || [])));
-  // Get filtered tags based on selected categories
   const getFilteredTags = () => {
-    if (formData.categoryIds.length === 0) {
-      return allTags;
-    }
+    if (formData.categoryIds.length === 0) return allTags;
     return Array.from(new Set(
       resources
-        .filter(item => 
-          formData.categoryIds.length === 0 || 
+        .filter(item =>
+          formData.categoryIds.length === 0 ||
           item.categories?.some(cat => formData.categoryIds.includes(cat.id))
         )
         .flatMap(item => item.tags || [])
@@ -72,20 +66,15 @@ export function Resources() {
   };
   const filteredTags = getFilteredTags();
 
-  // Note: Subcategory filtering removed - using ColorCodedSubcategorySelector only
-
-  // Handle tag input changes and show suggestions
   const handleTagInputChange = (value: string) => {
     setTagInputValue(value);
-    
     if (value.trim()) {
       const suggestions = filteredTags
-        .filter(tag => 
+        .filter(tag =>
           tag.toLowerCase().includes(value.toLowerCase()) &&
           !selectedFormTags.includes(tag)
         )
-        .slice(0, 5); // Show max 5 suggestions
-      
+        .slice(0, 5);
       setFilteredTagSuggestions(suggestions);
       setShowTagSuggestions(suggestions.length > 0);
     } else {
@@ -93,27 +82,22 @@ export function Resources() {
     }
   };
 
-  // Handle click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tagInputRef.current && !tagInputRef.current.contains(event.target as Node)) {
         setShowTagSuggestions(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Check if we should open the form automatically
   useEffect(() => {
     const action = searchParams.get('action');
     const id = searchParams.get('id');
     if (action === 'new') {
       setShowForm(true);
-      setSearchParams({}); // Clear the URL parameter
+      setSearchParams({});
     }
     if (action === 'edit' && id) {
       const res = resources.find(r => r.id === id);
@@ -129,20 +113,15 @@ export function Resources() {
     fetchAllCategoriesForForm();
   }, [user]);
 
-  // Enhanced taxonomy logic - fetch subcategories with category info when categories change
   useEffect(() => {
     if (!user || formData.categoryIds.length === 0) {
       setAvailableSubcategoriesWithCategory([]);
       return;
     }
-
     (async () => {
       try {
-        // Fetch subcategories for selected categories
         const subLists = await Promise.all(formData.categoryIds.map(id => getSubcategories(user.id, id)));
         const allSubcats = subLists.flat();
-
-        // Create subcategories with category information for enhanced selector
         const subcategoriesWithCategory = allSubcats.map(sub => ({
           ...sub,
           category: allCategories.find(cat => cat.id === sub.category_id)!
@@ -152,17 +131,12 @@ export function Resources() {
         console.error('Error fetching enhanced subcategories:', error);
       }
     })();
-  }, [user, formData.categoryIds, allCategories]); // Removed selectedFormSubcategoryNames dependency
+  }, [user, formData.categoryIds, allCategories]);
 
-  // Enhanced taxonomy handlers
   const handleSubcategoryToggle = (subcategoryId: string) => {
-    setSelectedFormSubcategories(prev => {
-      if (prev.includes(subcategoryId)) {
-        return prev.filter(id => id !== subcategoryId);
-      } else {
-        return [...prev, subcategoryId];
-      }
-    });
+    setSelectedFormSubcategories(prev =>
+      prev.includes(subcategoryId) ? prev.filter(id => id !== subcategoryId) : [...prev, subcategoryId]
+    );
   };
 
   const handleTagAssignmentAdd = (assignment: {
@@ -173,15 +147,9 @@ export function Resources() {
     categoryColor: string;
   }) => {
     setTagAssignments(prev => {
-      // Check if this tag-subcategory combination already exists
       const exists = prev.some(a => a.tag === assignment.tag && a.subcategoryId === assignment.subcategoryId);
-      if (!exists) {
-        return [...prev, assignment];
-      }
-      return prev;
+      return exists ? prev : [...prev, assignment];
     });
-    
-    // Also add to selectedFormTags if not already there
     if (!selectedFormTags.includes(assignment.tag)) {
       setSelectedFormTags(prev => [...prev, assignment.tag]);
     }
@@ -189,8 +157,6 @@ export function Resources() {
 
   const handleTagAssignmentRemove = (tag: string, subcategoryId: string) => {
     setTagAssignments(prev => prev.filter(a => !(a.tag === tag && a.subcategoryId === subcategoryId)));
-    
-    // Remove from selectedFormTags if no other assignments exist for this tag
     const hasOtherAssignments = tagAssignments.some(a => a.tag === tag && a.subcategoryId !== subcategoryId);
     if (!hasOtherAssignments) {
       setSelectedFormTags(prev => prev.filter(t => t !== tag));
@@ -199,7 +165,6 @@ export function Resources() {
 
   const fetchResources = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('resources')
@@ -229,17 +194,14 @@ export function Resources() {
     }
   };
 
-
   const fetchAllCategoriesForForm = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
         .order('name');
-
       if (error) throw error;
       setAllCategories(data || []);
     } catch (error) {
@@ -252,7 +214,6 @@ export function Resources() {
     if (!user) return;
 
     try {
-      // Use selectedFormTags directly since we're now using the smart tag input
       const finalTags = selectedFormTags;
       const finalSubcategories = selectedFormSubcategories;
       const resourceData = {
@@ -267,51 +228,37 @@ export function Resources() {
       let resourceId;
 
       if (editingResource) {
-        // Update existing resource (scope by user for RLS)
         const { error } = await supabase
           .from('resources')
           .update(resourceData)
           .eq('id', editingResource.id)
           .eq('user_id', user.id);
-
         if (error) throw error;
         resourceId = editingResource.id;
         toast.success('Resource updated successfully!');
       } else {
-        // Create new resource
         const { data, error } = await supabase
           .from('resources')
           .insert([resourceData])
           .select()
           .single();
-
         if (error) throw error;
         resourceId = data.id;
         toast.success('Resource created successfully!');
       }
 
-      // Update categories (delete existing first to avoid duplicates)
-      await supabase
-        .from('resource_categories')
-        .delete()
-        .eq('resource_id', resourceId);
+      await supabase.from('resource_categories').delete().eq('resource_id', resourceId);
 
       if (formData.categoryIds.length > 0) {
         const categoryConnections = formData.categoryIds.map(categoryId => ({
           resource_id: resourceId,
           category_id: categoryId,
         }));
-
-        await supabase
-          .from('resource_categories')
-          .insert(categoryConnections);
+        await supabase.from('resource_categories').insert(categoryConnections);
       }
 
-      // Normalized taxonomy sync (always-on)
-      // 1) Subcategories: handle both existing IDs and new names
       let allUpsertedSubcats: { id: string; name: string }[] = [];
-      
-      // Handle existing subcategory IDs (from ColorCodedSelector)
+
       if (selectedFormSubcategories.length > 0) {
         const existingSubcats = selectedFormSubcategories.map(id => {
           const subcategory = availableSubcategoriesWithCategory.find(sub => sub.id === id);
@@ -319,69 +266,36 @@ export function Resources() {
         }).filter(Boolean) as { id: string; name: string }[];
         allUpsertedSubcats.push(...existingSubcats);
       }
-      
-      // Note: Manual subcategory input removed - only using ColorCodedSubcategorySelector now
-      
-      // Link all subcategories to the resource
+
       if (allUpsertedSubcats.length > 0) {
         const uniqueSubcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-        console.log('Saving resource subcategories:', uniqueSubcatIds);
-        
-        // Validate that all subcategories are valid UUIDs (not names)
         const validSubcategoryIds = uniqueSubcatIds.filter(id => {
-          // Basic UUID format check
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          const isValid = uuidRegex.test(id);
-          if (!isValid) {
-            console.warn('Invalid subcategory ID (possibly a name):', id);
-          }
-          return isValid;
+          return uuidRegex.test(id);
         });
-        
-        console.log('Valid subcategory IDs:', validSubcategoryIds);
-        
         if (validSubcategoryIds.length > 0) {
-          try {
-            await setResourceSubcategories(resourceId, validSubcategoryIds);
-            console.log('Resource subcategories saved successfully');
-          } catch (subcatError) {
-            console.error('Error saving resource subcategories:', subcatError);
-            throw subcatError;
-          }
-        } else {
-          console.warn('No valid subcategory IDs to save');
+          await setResourceSubcategories(resourceId, validSubcategoryIds);
         }
       }
 
-      // 2) Enhanced Smart Tags: Use specific tag assignments if available
       if (tagAssignments.length > 0) {
-        // Use the specific tag assignments created by the user
         const tagIds: string[] = [];
-        
-        // Group assignments by subcategory
         const assignmentsBySubcategory = tagAssignments.reduce((acc, assignment) => {
-          if (!acc[assignment.subcategoryId]) {
-            acc[assignment.subcategoryId] = [];
-          }
+          if (!acc[assignment.subcategoryId]) acc[assignment.subcategoryId] = [];
           acc[assignment.subcategoryId].push(assignment.tag);
           return acc;
         }, {} as Record<string, string[]>);
 
-        // Create tags for each subcategory with their specific assignments
         for (const [subcategoryId, tags] of Object.entries(assignmentsBySubcategory)) {
           const tagResults = await upsertTagsByNames(user.id!, subcategoryId, tags);
           tagIds.push(...tagResults.map(t => t.id));
         }
-
         if (tagIds.length > 0) {
           await setResourceTags(resourceId, Array.from(new Set(tagIds)));
         }
       } else if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
-        // Fallback to old logic if no specific assignments
         let tagIds: string[] = [];
-        
         if (selectedFormSubcategories.length > 0) {
-          // Smart association: distribute tags across subcategories
           let subcatIds: string[] = [];
           if (allUpsertedSubcats.length > 0) {
             subcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
@@ -391,16 +305,13 @@ export function Resources() {
             );
             subcatIds = Array.from(new Set(subcatResults.flat().map(s => s.id)));
           }
-          
           if (subcatIds.length > 0) {
-            // Create tags for each subcategory (smart distribution)
             const tagResults = await Promise.all(
               subcatIds.map((subcatId) => upsertTagsByNames(user.id!, subcatId, selectedFormTags))
             );
             tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
           }
         } else {
-          // No subcategories chosen: create category-level tags
           const tagResults = await Promise.all(
             formData.categoryIds.map((catId) => upsertCategoryTagsByNames(user.id!, catId, selectedFormTags))
           );
@@ -411,14 +322,7 @@ export function Resources() {
         }
       }
 
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        url: '',
-        tags: '',
-        categoryIds: [],
-      });
+      setFormData({ title: '', description: '', url: '', tags: '', categoryIds: [] });
       setSelectedFormTags([]);
       setSelectedFormSubcategories([]);
       setTagAssignments([]);
@@ -443,16 +347,13 @@ export function Resources() {
       categoryIds: resource.categories?.map(cat => cat.id) || [],
     });
     setSelectedFormTags(resource.tags);
-    
-    // Convert subcategory names to IDs for editing existing items
     const subcategoryNames = resource.subcategories || [];
     const subcategoryIds = subcategoryNames.map(name => {
       const found = availableSubcategoriesWithCategory.find(sub => sub.name === name);
       return found ? found.id : null;
     }).filter(id => id !== null) as string[];
-    
     setSelectedFormSubcategories(subcategoryIds);
-    setTagAssignments([]); // Reset tag assignments for editing
+    setTagAssignments([]);
     setTagInputValue('');
     setShowTagSuggestions(false);
     setShowForm(true);
@@ -460,20 +361,13 @@ export function Resources() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this resource?')) return;
-
     try {
-      // Clean up junction table first to satisfy FK constraints
-      await supabase
-        .from('resource_categories')
-        .delete()
-        .eq('resource_id', id);
-
+      await supabase.from('resource_categories').delete().eq('resource_id', id);
       const { error } = await supabase
         .from('resources')
         .delete()
         .eq('id', id)
         .eq('user_id', user!.id);
-
       if (error) throw error;
       toast.success('Resource deleted successfully!');
       fetchResources();
@@ -483,12 +377,9 @@ export function Resources() {
     }
   };
 
-
-  // Filter resources
   const filteredResources = resources.filter(resource => {
-    const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    return resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           resource.description.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   if (loading) {
@@ -513,29 +404,18 @@ export function Resources() {
             className="p-2 text-gray-600 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition-colors"
             title={isGridLayout ? "Switch to list view" : "Switch to grid view"}
           >
-            {isGridLayout ? (
-              <LayoutList className="w-5 h-5" />
-            ) : (
-              <Grid className="w-5 h-5" />
-            )}
+            {isGridLayout ? <LayoutList className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
           </button>
           <Link
             to="/taxonomy"
             className="inline-flex items-center px-3 py-2 text-sm border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700"
-            title="Manage taxonomy"
           >
             Manage Taxonomy
           </Link>
           <button
             onClick={() => {
               setEditingResource(null);
-              setFormData({
-                title: '',
-                description: '',
-                url: '',
-                tags: '',
-                categoryIds: [],
-              });
+              setFormData({ title: '', description: '', url: '', tags: '', categoryIds: [] });
               setShowForm(true);
             }}
             className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -571,9 +451,7 @@ export function Resources() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Title *
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
                 <input
                   type="text"
                   required
@@ -584,9 +462,7 @@ export function Resources() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  URL 
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">URL</label>
                 <input
                   type="url"
                   value={formData.url}
@@ -596,9 +472,7 @@ export function Resources() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
                 <RichTextEditor
                   value={formData.description}
                   onChange={(content) => setFormData(prev => ({ ...prev, description: content }))}
@@ -606,11 +480,7 @@ export function Resources() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Tags
-                </label>
-                
-                {/* Selected tags display */}
+                <label className="block text-sm font-medium text-gray-300 mb-2">Tags</label>
                 {selectedFormTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedFormTags.map((tag) => (
@@ -626,32 +496,26 @@ export function Resources() {
                     ))}
                   </div>
                 )}
-                
-                {/* Category-based tag suggestions */}
                 {filteredTags.length > 0 && (
                   <div className="mb-3">
                     <label className="block text-xs text-gray-400 mb-2">
                       {formData.categoryIds.length > 0 ? 'Tags for selected categories:' : 'All available tags:'}
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {filteredTags
-                        .filter(tag => !selectedFormTags.includes(tag))
-                        .map((tag) => (
-                          <button
-                            type="button"
-                            key={tag}
-                            onClick={() => setSelectedFormTags(prev => [...prev, tag])}
-                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
-                          >
-                            <Tag className="w-3 h-3 mr-1" />
-                            {tag}
-                          </button>
-                        ))}
+                      {filteredTags.filter(tag => !selectedFormTags.includes(tag)).map((tag) => (
+                        <button
+                          type="button"
+                          key={tag}
+                          onClick={() => setSelectedFormTags(prev => [...prev, tag])}
+                          className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
+                        >
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
-                
-                {/* Smart tag input with autocomplete */}
                 <div className="relative">
                   <label className="block text-xs text-gray-400 mb-1">Type to search or add new tags</label>
                   <input
@@ -675,8 +539,6 @@ export function Resources() {
                     placeholder="Start typing to see suggestions..."
                     className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
                   />
-                  
-                  {/* Tag suggestions dropdown */}
                   {showTagSuggestions && (
                     <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredTagSuggestions.map((tag) => (
@@ -684,9 +546,7 @@ export function Resources() {
                           type="button"
                           key={tag}
                           onClick={() => {
-                            if (!selectedFormTags.includes(tag)) {
-                              setSelectedFormTags(prev => [...prev, tag]);
-                            }
+                            if (!selectedFormTags.includes(tag)) setSelectedFormTags(prev => [...prev, tag]);
                             setTagInputValue('');
                             setShowTagSuggestions(false);
                           }}
@@ -699,26 +559,18 @@ export function Resources() {
                     </div>
                   )}
                 </div>
-                
-                <div className="text-xs text-gray-500 mt-1">
-                  Press Enter or comma to add, Escape to close suggestions
-                </div>
+                <div className="text-xs text-gray-500 mt-1">Press Enter or comma to add, Escape to close suggestions</div>
               </div>
 
-              {/* Subcategories input */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Subcategories</label>
-
-                {/* Selected subcategories display */}
                 {selectedFormSubcategories.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedFormSubcategories.map((sc) => (
                       <button
                         key={sc}
                         type="button"
-                        onClick={() => {
-                          setSelectedFormSubcategories(prev => prev.filter(s => s !== sc));
-                        }}
+                        onClick={() => setSelectedFormSubcategories(prev => prev.filter(s => s !== sc))}
                         className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-600 text-white border border-purple-500 transition-colors"
                       >
                         {sc}
@@ -727,15 +579,11 @@ export function Resources() {
                     ))}
                   </div>
                 )}
-
-                {/* Note: Manual subcategory input removed - using ColorCodedSubcategorySelector only */}
               </div>
 
               {allCategories.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Categories
-                  </label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Categories</label>
                   <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
                     {allCategories.map((category) => (
                       <label key={category.id} className="flex items-center">
@@ -753,17 +601,13 @@ export function Resources() {
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
                         <span className="ml-2 text-sm text-gray-200">{category.name}</span>
-                        <div 
-                          className="ml-2 w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
+                        <div className="ml-2 w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                       </label>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Enhanced Subcategory Selector */}
               {formData.categoryIds.length > 0 && (
                 <div className="space-y-4">
                   <ColorCodedSubcategorySelector
@@ -776,7 +620,6 @@ export function Resources() {
                 </div>
               )}
 
-              {/* Smart Tag Assignment */}
               {selectedFormSubcategories.length > 0 && (
                 <div className="space-y-4">
                   <SmartTagAssignment
@@ -793,10 +636,7 @@ export function Resources() {
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingResource(null);
-                  }}
+                  onClick={() => { setShowForm(false); setEditingResource(null); }}
                   className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Cancel
@@ -814,62 +654,58 @@ export function Resources() {
       )}
 
       {/* Resources Grid/List View */}
-      <div className={isGridLayout ? "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+      <div className={isGridLayout ? "grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-3"}>
         {filteredResources.map((resource) => {
           const isExpanded = expandedItemId === resource.id;
           return (
-            <div 
-              key={resource.id} 
-              className={`bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:shadow-md transition-shadow ${!isGridLayout ? 'cursor-pointer' : ''}`}
+            <div
+              key={resource.id}
+              className={`group relative bg-gray-800/80 rounded-xl border border-gray-700/60 hover:border-gray-600/80 hover:shadow-xl hover:shadow-black/20 transition-all duration-300 overflow-hidden ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <Link 
-                    to={`/resources/${resource.id}`}
-                    className="text-2xl font-semibold text-gray-50 flex-1 mr-3 hover:text-indigo-400 transition-colors"
-                  >
-                    {resource.title}
-                  </Link>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
+              {/* Top accent bar */}
+              <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500/30 to-purple-500/10" />
+
+              <div className="p-5" onClick={(e) => e.stopPropagation()}>
+                {/* Actions (visible on hover) */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1" />
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(resource);
-                      }}
-                      className="p-1 text-gray-500 hover:text-indigo-600 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); handleEdit(resource); }}
+                      className="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-all"
+                      title="Edit"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(resource.id);
-                      }}
-                      className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(resource.id); }}
+                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
+                      title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {resource.description && (
-                  <div 
-                    className="text-sm mb-3 line-clamp-3 rich-content"
-                    dangerouslySetInnerHTML={{ __html: resource.description }}
-                    style={{
-                      color: '#d1d5db',
-                    }}
-                  />
-                )}
+                {/* Title */}
+                <Link
+                  to={`/resources/${resource.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="block mb-3 group/title"
+                >
+                  <h2 className="text-base font-semibold text-gray-100 leading-snug group-hover/title:text-indigo-300 transition-colors duration-200 line-clamp-2">
+                    {resource.title}
+                  </h2>
+                </Link>
 
-                {/* Categories */}
+                {/* Category pills */}
                 {resource.categories && resource.categories.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-1.5 mb-3">
                     {resource.categories.map((category) => (
                       <span
                         key={category.id}
-                        className="inline-block px-2 py-1 text-xs font-medium text-white rounded-full"
+                        className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded-md opacity-90"
                         style={{ backgroundColor: category.color }}
                       >
                         {category.name}
@@ -878,28 +714,13 @@ export function Resources() {
                   </div>
                 )}
 
-                {/* Tags */}
-                {resource.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {resource.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-700 text-gray-200 rounded-full"
-                      >
-                        <Tag className="w-3 h-3 mr-1" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
                 {/* Subcategories */}
                 {resource.subcategories && resource.subcategories.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
+                  <div className="flex flex-wrap gap-1.5 mb-3">
                     {resource.subcategories.map((sc, idx) => (
                       <span
                         key={idx}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-700 text-gray-200 rounded-full"
+                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-md"
                       >
                         {sc}
                       </span>
@@ -907,20 +728,42 @@ export function Resources() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
+                {/* Tags */}
+                {resource.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {resource.tags.slice(0, 4).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-700/80 text-gray-300 border border-gray-600/50 rounded-md"
+                      >
+                        <Tag className="w-2.5 h-2.5 mr-1 text-gray-400" />
+                        {tag}
+                      </span>
+                    ))}
+                    {resource.tags.length > 4 && (
+                      <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-500 bg-gray-700/50 rounded-md">
+                        +{resource.tags.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-700/50">
+                  <span className="text-xs text-gray-500 tabular-nums">
+                    {new Date(resource.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
                   <a
                     href={resource.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors group/link"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Open Resource
-                    <ExternalLink className="ml-1 w-4 h-4" />
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Open
+                    <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
                   </a>
-                  <span className="text-xs text-gray-500">
-                    {new Date(resource.created_at).toLocaleDateString()}
-                  </span>
                 </div>
               </div>
             </div>
@@ -937,7 +780,7 @@ export function Resources() {
             {resources.length === 0 ? 'No resources yet' : 'No matching resources'}
           </h3>
           <p className="text-gray-500 mb-4">
-            {resources.length === 0 
+            {resources.length === 0
               ? 'Create your first resource to get started.'
               : 'Try adjusting your search or filters.'}
           </p>
@@ -952,8 +795,6 @@ export function Resources() {
           )}
         </div>
       )}
-
-      
     </div>
   );
 }

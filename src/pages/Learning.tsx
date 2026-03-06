@@ -16,13 +16,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Filter, Edit2, Trash2, ExternalLink, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
 export function Learning() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [learning, setLearning] = useState<Learning[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -459,20 +459,7 @@ export function Learning() {
             Manage Taxonomy
           </Link>
           <button
-            onClick={() => {
-              setEditingItem(null);
-              setFormData({
-                title: '',
-                description: '',
-                url: '',
-                tags: '',
-                difficulty_level: 'Beginner',
-                categoryIds: [],
-              });
-              setSelectedFormTags([]);
-              setSelectedFormSubcategories([]);
-              setShowForm(true);
-            }}
+            onClick={() => navigate('/learning/new')}
             className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -689,8 +676,8 @@ export function Learning() {
         )}
       </div>
 
-      {/* Learning Form Modal */}
-      {showForm && (
+      {/* Learning Form Modal - Removed - now using dedicated page */}
+      {false && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
             <div className="p-6 border-b border-gray-700 bg-gray-900/50">
@@ -1019,7 +1006,7 @@ export function Learning() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEdit(item);
+                        window.open(`/learning/${item.id}/edit`, '_blank');
                       }}
                       className="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-all"
                       title="Edit"

@@ -16,6 +16,8 @@ import { PayloadDetail } from './pages/PayloadDetail';
 import { PayloadForm } from './pages/PayloadForm';
 import StickyNotes from './pages/StickyNotes';
 import Taxonomy from './pages/Taxonomy';
+import { LearningForm } from './pages/LearningForm';
+import { ResourceForm } from './pages/ResourceForm';
 import { Toaster } from 'react-hot-toast';
 
 
@@ -40,9 +42,13 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/resources/index" element={<ResourceIndex />} />
+        <Route path="/resources/new" element={<ResourceForm />} />
+        <Route path="/resources/:id/edit" element={<ResourceForm />} />
         <Route path="/resources/:id" element={<ResourceDetail />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/index" element={<Index />} />
+        <Route path="/learning/new" element={<LearningForm />} />
+        <Route path="/learning/:id/edit" element={<LearningForm />} />
         <Route path="/learning/:id" element={<LearningDetail />} />
         <Route path="/categories" element={<Navigate to="/taxonomy" replace />} />
         <Route path="/taxonomy" element={<Taxonomy />} />

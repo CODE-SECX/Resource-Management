@@ -154,12 +154,13 @@ export function LearningDetail() {
           </Link>
           
           <div className="flex items-center space-x-2">
-            <Link
-              to={`/learning?action=edit&id=${learning.id}`}
+            <button
+              onClick={() => window.open(`/learning/${learning.id}/edit`, '_blank')}
               className="p-2 text-gray-400 hover:text-indigo-400 rounded-lg hover:bg-gray-800 transition-colors"
+              title="Edit"
             >
               <Edit2 className="w-5 h-5" />
-            </Link>
+            </button>
             <button
               onClick={handleShare}
               className="p-2 text-gray-400 hover:text-green-400 rounded-lg hover:bg-gray-800 transition-colors"

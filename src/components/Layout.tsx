@@ -312,7 +312,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main content */}
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="px-6 lg:px-12 xl:px-20 py-8">
           <div className="animate-fade-in-up">
             {children}
           </div>

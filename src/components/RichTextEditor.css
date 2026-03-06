@@ -1,0 +1,70 @@
+/* Rich Text Editor Styling */
+.rich-text-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* TinyMCE Editor Container */
+.rich-text-editor .tox {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: visible;
+}
+
+.rich-text-editor .tox-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: visible;
+  min-height: 0;
+}
+
+.rich-text-editor .tox-edit-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: visible !important;
+  min-height: 0;
+}
+
+.rich-text-editor .tox-edit-area > iframe {
+  overflow: visible !important;
+}
+
+/* Ensure content area has no scrollbars */
+.rich-text-editor .mce-content-body {
+  overflow: visible !important;
+  max-height: none !important;
+  min-height: auto !important;
+}
+
+/* Toolbar styling */
+.rich-text-editor .tox-toolbar {
+  border-bottom: 1px solid #4b5563;
+  background-color: #1f2937;
+  flex-shrink: 0;
+}
+
+.rich-text-editor .tox-toolbar-overlord {
+  background-color: #1f2937;
+  border-bottom: 1px solid #4b5563;
+  flex-shrink: 0;
+}
+
+/* Remove any scrollbars */
+.rich-text-editor .tox-sidebar-wrap {
+  overflow: visible;
+}
+
+/* Status bar styling */
+.rich-text-editor .tox-statusbar {
+  border-top: 1px solid #4b5563;
+  background-color: #111827;
+  flex-shrink: 0;
+}

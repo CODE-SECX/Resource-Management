@@ -365,7 +365,7 @@
   }
 }
 
-/* Rich content styling - preserve inline styles from TinyMCE */
+/* Rich content styling - preserve inline styles from rich text editor */
 .rich-content {
   color: #d1d5db;
 }

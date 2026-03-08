@@ -398,7 +398,11 @@ export function Learning() {
   };
 
   const allTags = Array.from(new Set(learning.flatMap(item => item.tags)));
-  const allSubcategories = Array.from(new Set(learning.flatMap(item => item.subcategories || [])));
+  const allSubcategories = Array.from(new Map(
+    learning
+      .flatMap(item => item.taxonomySubcategories || [])
+      .map(sc => [sc.id, sc])
+  ).values());
 
   const filteredLearning = learning.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -411,7 +415,7 @@ export function Learning() {
                        selectedTags.some(tag => item.tags.includes(tag));
 
     const matchesSubcategories = selectedSubcategoryFilters.length === 0 ||
-                          selectedSubcategoryFilters.some(sc => (item.subcategories || []).includes(sc));
+                          selectedSubcategoryFilters.some(sc => item.taxonomySubcategories?.some(tsc => tsc.id === sc));
 
     const matchesDifficulty = selectedDifficulty.length === 0 ||
                              selectedDifficulty.includes(item.difficulty_level);
@@ -639,22 +643,22 @@ export function Learning() {
                   <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
                     {allSubcategories.map((sc) => (
                       <button
-                        key={sc}
+                        key={sc.id}
                         onClick={() => {
                           setSelectedSubcategoryFilters(prev =>
-                            prev.includes(sc)
-                              ? prev.filter(s => s !== sc)
-                              : [...prev, sc]
+                            prev.includes(sc.id)
+                              ? prev.filter(s => s !== sc.id)
+                              : [...prev, sc.id]
                           );
                         }}
                         className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                          selectedSubcategoryFilters.includes(sc)
+                          selectedSubcategoryFilters.includes(sc.id)
                             ? 'bg-purple-600 text-white border border-purple-500'
                             : 'text-gray-300 border border-gray-600 hover:bg-gray-700'
                         }`}
                       >
-                        {sc}
-                        {selectedSubcategoryFilters.includes(sc) && (
+                        {sc.name}
+                        {selectedSubcategoryFilters.includes(sc.id) && (
                           <X className="ml-1 w-3 h-3" />
                         )}
                       </button>
@@ -1053,14 +1057,14 @@ export function Learning() {
                 )}
 
                 {/* Subcategories */}
-                {item.subcategories && item.subcategories.length > 0 && (
+                {item.taxonomySubcategories && item.taxonomySubcategories.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    {item.subcategories.map((sc, idx) => (
+                    {item.taxonomySubcategories.map((sc, idx) => (
                       <span
-                        key={idx}
+                        key={sc.id}
                         className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-md"
                       >
-                        {sc}
+                        {sc.name}
                       </span>
                     ))}
                   </div>

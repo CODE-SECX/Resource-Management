@@ -314,19 +314,19 @@ export function ResourceIndex() {
                             )}
 
                             {/* Subcategories */}
-                            {item.subcategories && item.subcategories.length > 0 && (
+                            {item.taxonomySubcategories && item.taxonomySubcategories.length > 0 && (
                               <div className="flex flex-wrap gap-2">
-                                {item.subcategories.slice(0, 3).map((subcategory) => (
+                                {item.taxonomySubcategories.slice(0, 3).map((subcategory) => (
                                   <span
-                                    key={subcategory}
+                                    key={subcategory.id}
                                     className="inline-flex items-center px-2 py-1 text-xs text-emerald-300 bg-emerald-900/30 rounded-md border border-emerald-700/50"
                                   >
-                                    {subcategory}
+                                    {subcategory.name}
                                   </span>
                                 ))}
-                                {item.subcategories.length > 3 && (
+                                {item.taxonomySubcategories.length > 3 && (
                                   <span className="text-xs text-slate-500 px-2 py-1">
-                                    +{item.subcategories.length - 3} more subcategories
+                                    +{item.taxonomySubcategories.length - 3} more subcategories
                                   </span>
                                 )}
                               </div>

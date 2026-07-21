@@ -6,12 +6,14 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Button } from '../components/ui/button';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export function Resources() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,56 +86,69 @@ export function Resources() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div className="space-y-2">
+            <Skeleton height={32} width={220} />
+            <Skeleton height={16} width={320} />
+          </div>
+          <Skeleton height={40} width={160} />
+        </div>
+        <Skeleton height={44} className="w-full" />
+        <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <Skeleton height={20} width="70%" />
+              <div className="flex gap-2">
+                <Skeleton height={20} width={60} rounded="full" />
+                <Skeleton height={20} width={60} rounded="full" />
+              </div>
+              <Skeleton height={14} width="90%" />
+              <Skeleton height={14} width="40%" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container-wide space-y-8">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-50 mb-2">Resource Library</h1>
-          <p className="text-gray-300">Organize and access your comprehensive resource collection</p>
-        </div>
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          <button
-            onClick={() => setIsGridLayout(!isGridLayout)}
-            className="p-2 text-gray-600 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition-colors"
-            title={isGridLayout ? "Switch to list view" : "Switch to grid view"}
-          >
-            {isGridLayout ? <LayoutList className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
-          </button>
-          <Link
-            to="/taxonomy"
-            className="inline-flex items-center px-3 py-2 text-sm border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700"
-          >
-            Manage Taxonomy
-          </Link>
-          <button
-            onClick={() => navigate('/resources/new')}
-            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Resource
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Resource Library"
+        subtitle="Organize and access your comprehensive resource collection"
+        actions={
+          <>
+            <button
+              onClick={() => setIsGridLayout(!isGridLayout)}
+              className="p-2.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-accent transition-colors duration-150"
+              title={isGridLayout ? 'Switch to list view' : 'Switch to grid view'}
+              aria-label={isGridLayout ? 'Switch to list view' : 'Switch to grid view'}
+            >
+              {isGridLayout ? <LayoutList className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
+            </button>
+            <Link to="/taxonomy" className="btn-secondary">
+              Manage Taxonomy
+            </Link>
+            <Button onClick={() => navigate('/resources/new')}>
+              <Plus className="w-4 h-4" />
+              Add Resource
+            </Button>
+          </>
+        }
+      />
 
       {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search resources..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-3 w-full border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <input
+          type="text"
+          placeholder="Search resources..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input-primary pl-10 py-3"
+        />
       </div>
 
       {/* Resources Grid/List View */}
@@ -143,28 +158,30 @@ export function Resources() {
           return (
             <div
               key={resource.id}
-              className={`group relative bg-gray-800/80 rounded-xl border border-gray-700/60 hover:border-gray-600/80 hover:shadow-xl hover:shadow-black/20 transition-all duration-300 overflow-hidden ${!isGridLayout ? 'cursor-pointer' : ''}`}
+              className={`group relative bg-card rounded-xl border border-border shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all duration-300 overflow-hidden ${!isGridLayout ? 'cursor-pointer' : ''}`}
               onClick={() => !isGridLayout && setExpandedItemId(isExpanded ? null : resource.id)}
             >
               {/* Top accent bar */}
-              <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500/30 to-purple-500/10" />
+              <div className="h-1 w-full bg-primary/20" />
 
               <div className="p-5" onClick={(e) => e.stopPropagation()}>
                 {/* Actions (visible on hover) */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1" />
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => { e.stopPropagation(); window.open(`/resources/${resource.id}/edit`, '_blank'); }}
-                      className="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-all"
+                      className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors duration-150"
                       title="Edit"
+                      aria-label="Edit resource"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(resource.id); }}
-                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
+                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors duration-150"
                       title="Delete"
+                      aria-label="Delete resource"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -177,7 +194,7 @@ export function Resources() {
                   onClick={(e) => e.stopPropagation()}
                   className="block mb-3 group/title"
                 >
-                  <h2 className="text-base font-semibold text-gray-100 leading-snug group-hover/title:text-indigo-300 transition-colors duration-200 line-clamp-2">
+                  <h2 className="text-base font-semibold text-foreground leading-snug group-hover/title:text-primary transition-colors duration-200 line-clamp-2">
                     {resource.title}
                   </h2>
                 </Link>
@@ -203,7 +220,7 @@ export function Resources() {
                     {resource.subcategories.map((sc, idx) => (
                       <span
                         key={idx}
-                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-md"
+                        className="category-tag"
                       >
                         {sc}
                       </span>
@@ -217,14 +234,14 @@ export function Resources() {
                     {resource.tags.slice(0, 4).map((tag, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-700/80 text-gray-300 border border-gray-600/50 rounded-md"
+                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground border border-border rounded-md"
                       >
-                        <Tag className="w-2.5 h-2.5 mr-1 text-gray-400" />
+                        <Tag className="w-2.5 h-2.5 mr-1 text-muted-foreground" />
                         {tag}
                       </span>
                     ))}
                     {resource.tags.length > 4 && (
-                      <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-500 bg-gray-700/50 rounded-md">
+                      <span className="inline-flex items-center px-2 py-0.5 text-xs text-muted-foreground bg-muted rounded-md">
                         +{resource.tags.length - 4}
                       </span>
                     )}
@@ -232,20 +249,20 @@ export function Resources() {
                 )}
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-700/50">
-                  <span className="text-xs text-gray-500 tabular-nums">
+                <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     {new Date(resource.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                   <a
                     href={resource.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors group/link"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                     Open
-                    <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                    <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
                   </a>
                 </div>
               </div>
@@ -255,26 +272,23 @@ export function Resources() {
       </div>
 
       {filteredResources.length === 0 && (
-        <div className="text-center py-12">
-          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-            <Search className="w-8 h-8 text-gray-400" />
+        <div className="text-center py-16 px-4">
+          <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Search className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium text-gray-100 mb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             {resources.length === 0 ? 'No resources yet' : 'No matching resources'}
           </h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-muted-foreground mb-6">
             {resources.length === 0
               ? 'Create your first resource to get started.'
               : 'Try adjusting your search or filters.'}
           </p>
           {resources.length === 0 && (
-            <button
-              onClick={() => navigate('/resources/new')}
-              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => navigate('/resources/new')}>
+              <Plus className="w-4 h-4" />
               Add Your First Resource
-            </button>
+            </Button>
           )}
         </div>
       )}

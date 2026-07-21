@@ -175,7 +175,7 @@ export function TaxonomyManager({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-700 border-t-indigo-500"></div>
+        <div className="loading-spinner h-8 w-8"></div>
       </div>
     );
   }
@@ -183,22 +183,22 @@ export function TaxonomyManager({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <Folder className="w-4 h-4 text-white" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Folder className="w-4 h-4 text-primary" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-100">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-foreground">
               {type === 'resources' ? 'Resource' : 'Learning'} Categories
             </h2>
-            <p className="text-sm text-slate-400">Organize and filter your content</p>
+            <p className="text-sm text-muted-foreground">Organize and filter your content</p>
           </div>
         </div>
         {activeFiltersCount > 0 && (
           <button
             onClick={onClearAll}
-            className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-600 transition-all duration-200 text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/70 border border-border transition-all duration-200 text-sm text-primary hover:text-primary/80 font-medium shrink-0"
           >
             <X className="w-3 h-3" />
             <span>Clear all ({activeFiltersCount})</span>
@@ -208,9 +208,9 @@ export function TaxonomyManager({
 
       {/* Categories Section */}
       <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600"></div>
-          <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Categories</h3>
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 rounded-full bg-primary"></div>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Categories</h3>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -219,30 +219,30 @@ export function TaxonomyManager({
               key={category.id}
               className={`group relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
                 selectedCategories.includes(category.id)
-                  ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/20'
-                  : 'border-slate-600 hover:border-slate-500 bg-slate-800/50 hover:bg-slate-800'
+                  ? 'border-primary bg-primary/10 shadow-card-hover'
+                  : 'border-border hover:border-primary/40 bg-card hover:bg-accent/40'
               }`}
               onClick={() => onCategoryToggle(category.id)}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className="w-3 h-3 rounded-full shadow-sm"
+                    className="w-3 h-3 shrink-0 rounded-full shadow-sm"
                     style={{ backgroundColor: category.color || '#64748B' }}
                   ></div>
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-100 group-hover:text-indigo-300 transition-colors">
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
                       {category.name}
                     </h4>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-muted-foreground">
                       {getSubcategoriesForCategory(category.id).length} subcategories
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {selectedCategories.includes(category.id) && (
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-3 h-3 text-primary-foreground" />
                     </div>
                   )}
                 </div>
@@ -258,23 +258,24 @@ export function TaxonomyManager({
           {Array.from(getGroupedSubcategoriesAndTags().values()).map(({ category, subcategories: categorySubcategories, categoryLevelTags, subcategoryTags }) => (
             <div key={category.id} className="space-y-4">
               {/* Category Header */}
-              <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/50">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
                 <div
-                  className="w-2 h-2 rounded-full"
+                  className="w-2 h-2 shrink-0 rounded-full"
                   style={{ backgroundColor: category.color || '#64748B' }}
                 ></div>
-                <h3 className="text-sm font-semibold text-slate-200">
+                <h3 className="text-sm font-semibold text-foreground truncate">
                   {category.name}
                 </h3>
                 <div className="flex-1"></div>
                 <button
                   onClick={() => toggleCategoryExpansion(category.id)}
-                  className="p-1 hover:bg-slate-700 rounded transition-colors"
+                  aria-label={expandedCategories.has(category.id) ? `Collapse ${category.name}` : `Expand ${category.name}`}
+                  className="p-1.5 hover:bg-accent rounded-md transition-colors duration-150 shrink-0"
                 >
                   {expandedCategories.has(category.id) ? (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   )}
                 </button>
               </div>
@@ -284,7 +285,7 @@ export function TaxonomyManager({
                   {/* Category-level Tags */}
                   {categoryLevelTags.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                         <Hash className="w-3 h-3" />
                         <span>Category Tags</span>
                       </h4>
@@ -294,18 +295,18 @@ export function TaxonomyManager({
                             key={tag}
                             className={`group relative px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
                               selectedTags.includes(tag)
-                                ? 'border-indigo-500 bg-indigo-500/10 shadow-md shadow-indigo-500/20'
-                                : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                                ? 'border-primary bg-primary/10 shadow-sm'
+                                : 'border-border hover:border-primary/40 bg-card hover:bg-accent/40'
                             }`}
                             onClick={() => onTagToggle(tag)}
                           >
-                            <div className="flex items-center space-x-2">
-                              <TagIcon className="w-3 h-3 text-slate-400" />
-                              <span className="text-xs font-medium text-slate-300 group-hover:text-indigo-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <TagIcon className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">
                                 {tag}
                               </span>
                               {selectedTags.includes(tag) && (
-                                <Check className="w-3 h-3 text-indigo-500" />
+                                <Check className="w-3 h-3 text-primary" />
                               )}
                             </div>
                           </div>
@@ -317,7 +318,7 @@ export function TaxonomyManager({
                   {/* Subcategories */}
                   {categorySubcategories.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide flex items-center space-x-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                         <FolderOpen className="w-3 h-3" />
                         <span>Subcategories</span>
                       </h4>
@@ -328,29 +329,29 @@ export function TaxonomyManager({
                             <div
                               className={`group relative p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
                                 selectedSubcategories.includes(subcategory.id)
-                                  ? 'border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/20'
-                                  : 'border-slate-600/50 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                                  ? 'border-success bg-success/10 shadow-sm'
+                                  : 'border-border hover:border-success/40 bg-card hover:bg-accent/40'
                               }`}
                               onClick={() => onSubcategoryToggle(subcategory.id)}
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div
-                                    className="w-2 h-2 rounded-full"
+                                    className="w-2 h-2 shrink-0 rounded-full"
                                     style={{ backgroundColor: subcategory.color || category.color || '#10B981' }}
                                   ></div>
-                                  <span className="text-xs font-medium text-slate-300 group-hover:text-emerald-300 transition-colors">
+                                  <span className="text-xs font-medium text-foreground group-hover:text-success transition-colors truncate">
                                     {subcategory.name}
                                   </span>
                                   {subcategoryTags.has(subcategory.id) && (
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-muted-foreground shrink-0">
                                       ({subcategoryTags.get(subcategory.id)?.length} tags)
                                     </span>
                                   )}
                                 </div>
                                 {selectedSubcategories.includes(subcategory.id) && (
-                                  <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                                    <Check className="w-2.5 h-2.5 text-white" />
+                                  <div className="w-4 h-4 shrink-0 rounded-full bg-success flex items-center justify-center">
+                                    <Check className="w-2.5 h-2.5 text-success-foreground" />
                                   </div>
                                 )}
                               </div>
@@ -358,25 +359,25 @@ export function TaxonomyManager({
 
                             {/* Subcategory Tags */}
                             {subcategoryTags.has(subcategory.id) && (
-                              <div className="ml-4 pl-4 border-l border-slate-600/30">
+                              <div className="ml-4 pl-4 border-l border-border">
                                 <div className="flex flex-wrap gap-1">
                                   {subcategoryTags.get(subcategory.id)?.map((tag: string) => (
                                     <div
                                       key={`${subcategory.id}-${tag}`}
                                       className={`group relative px-2 py-1 rounded-md border transition-all duration-200 cursor-pointer text-xs ${
                                         selectedTags.includes(tag)
-                                          ? 'border-indigo-400 bg-indigo-400/10 shadow-sm shadow-indigo-400/20'
-                                          : 'border-slate-600/40 hover:border-slate-500 bg-slate-800/20 hover:bg-slate-800/40'
+                                          ? 'border-primary bg-primary/10 shadow-sm'
+                                          : 'border-border hover:border-primary/40 bg-card hover:bg-accent/40'
                                       }`}
                                       onClick={() => onTagToggle(tag)}
                                     >
-                                      <div className="flex items-center space-x-1">
-                                        <TagIcon className="w-2.5 h-2.5 text-slate-500" />
-                                        <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
+                                      <div className="flex items-center gap-1">
+                                        <TagIcon className="w-2.5 h-2.5 text-muted-foreground" />
+                                        <span className="text-muted-foreground group-hover:text-primary transition-colors">
                                           {tag}
                                         </span>
                                         {selectedTags.includes(tag) && (
-                                          <Check className="w-2.5 h-2.5 text-indigo-400" />
+                                          <Check className="w-2.5 h-2.5 text-primary" />
                                         )}
                                       </div>
                                     </div>

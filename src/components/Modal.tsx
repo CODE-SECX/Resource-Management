@@ -1,6 +1,5 @@
 import { X } from 'lucide-react';
 import React, { useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -39,28 +38,29 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
-        <div className="fixed inset-0 transition-opacity" onClick={onClose}>
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="flex min-h-full items-center justify-center p-4 text-center sm:items-center">
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity animate-fade-in"
+          onClick={onClose}
+          aria-hidden="true"
+        />
 
         <div
-          className={`${sizeClasses[size]} relative transform overflow-hidden rounded-xl bg-gray-800 text-left shadow-2xl transition-all sm:my-8 w-full border border-gray-700`}
+          className={`${sizeClasses[size]} animate-scale-in relative transform overflow-hidden rounded-xl bg-card text-left align-middle shadow-modal transition-all my-8 w-full max-h-[90vh] flex flex-col border border-border`}
         >
-          <div className="bg-gray-800 px-6 pb-6 pt-6">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold leading-6 text-gray-100">{title}</h3>
-              <button
-                onClick={onClose}
-                className="rounded-lg bg-gray-700/50 text-gray-400 hover:text-gray-200 hover:bg-gray-700 p-1.5 transition-all duration-200"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="animate-fade-in-up">
-              {children}
-            </div>
+          <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6 border-b border-border shrink-0">
+            <h3 id="modal-title" className="text-lg sm:text-xl font-semibold leading-6 text-foreground">{title}</h3>
+            <button
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent p-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="px-5 py-5 sm:px-6 overflow-y-auto">
+            {children}
           </div>
         </div>
       </div>

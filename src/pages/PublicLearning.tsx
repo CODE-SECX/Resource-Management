@@ -39,38 +39,38 @@ export default function PublicLearning() {
   const getDifficultyColor = (level: string) => {
     switch (level) {
       case 'Beginner':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success/10 text-success border-success/30 dark:bg-success/15';
       case 'Intermediate':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-primary/10 text-primary border-primary/30 dark:bg-primary/15';
       case 'Advanced':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-warning/10 text-warning border-warning/30 dark:bg-warning/15';
       case 'Expert':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-destructive/10 text-destructive border-destructive/30 dark:bg-destructive/15';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-secondary text-secondary-foreground border-border';
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="loading-spinner h-8 w-8" role="status" aria-label="Loading" />
       </div>
     );
   }
 
   if (error || !learning) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-4">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-100 mb-2">Link Not Found</h2>
-          <p className="text-gray-400 mb-6">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Link Not Found</h2>
+          <p className="text-muted-foreground mb-6">
             {error || 'This learning resource is not available or the link has expired.'}
           </p>
           <button
             onClick={() => navigate('/')}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="btn-primary"
           >
             Go to Homepage
           </button>
@@ -80,92 +80,90 @@ export default function PublicLearning() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-full sm:max-w-full md:max-w-full lg:max-w-7xl xl:max-w-7xl">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-gray-100">Shared Learning</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">Shared Learning</h1>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <span>Public Link</span>
-          </div>
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground bg-secondary px-2.5 py-1 rounded-full">Public Link</span>
         </div>
 
         {/* Main Content */}
-        <article className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+        <article className="bg-card rounded-xl shadow-card border border-border">
           {/* Article Header */}
-          <header className="p-8 lg:p-10 border-b border-gray-700">
-            <h1 className="text-4xl font-bold text-gray-50 mb-6 leading-tight">
-              {learning.title}
-            </h1>
-            
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                Added: {new Date(learning.created_at).toLocaleDateString()}
+          <header className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 border-b border-border">
+            <div className="max-w-reading mx-auto">
+              <h1 className="font-sans text-3xl sm:text-4xl font-bold text-foreground mb-5 leading-tight tracking-tight">
+                {learning.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Added {new Date(learning.created_at).toLocaleDateString()}
+                </div>
+
+                {/* Difficulty Badge */}
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyColor(learning.difficulty_level)}`}>
+                  <GraduationCap className="w-3.5 h-3.5 mr-1" />
+                  {learning.difficulty_level}
+                </span>
               </div>
-              
-              {/* Difficulty Badge */}
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getDifficultyColor(learning.difficulty_level)}`}>
-                <GraduationCap className="w-4 h-4 mr-1" />
-                {learning.difficulty_level}
-              </span>
+
+              {/* Categories */}
+              {learning.categories && learning.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {learning.categories.map((category: any) => (
+                    <span
+                      key={category.id}
+                      className="inline-block px-3 py-1 text-xs font-semibold text-white rounded-full shadow-xs"
+                      style={{ backgroundColor: category.color }}
+                    >
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Tags */}
+              {learning.tags && learning.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {learning.tags.map((tag: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full"
+                    >
+                      <Tag className="w-3 h-3 mr-1" />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Categories */}
-            {learning.categories && learning.categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {learning.categories.map((category: any) => (
-                  <span
-                    key={category.id}
-                    className="inline-block px-3 py-1 text-sm font-medium text-white rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  >
-                    {category.name}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Tags */}
-            {learning.tags && learning.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {learning.tags.map((tag: string, index: number) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1 text-sm font-medium bg-gray-700 text-gray-200 rounded-full"
-                  >
-                    <Tag className="w-3 h-3 mr-1" />
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </header>
 
-          {/* Article Content */}
-          <div className="p-8 lg:p-10">
-            <div className="prose prose-invert prose-slate prose-lg max-w-full prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-8 prose-headings:mb-3 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg break-words">
-              <div 
-                className="text-gray-100"
-                dangerouslySetInnerHTML={{ __html: learning.description || '' }}
-              />
-            </div>
+          {/* Article Content — Medium-style reading experience */}
+          <div className="px-6 sm:px-10 py-8 sm:py-12">
+            <div
+              className="article-content"
+              dangerouslySetInnerHTML={{ __html: learning.description || '' }}
+            />
 
             {/* Action Button */}
             {learning.url && (
-              <div className="mt-8 pt-6 border-t border-gray-700">
+              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border">
                 <a
                   href={learning.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="btn-primary"
                 >
-                  <ExternalLink className="w-5 h-5 mr-2" />
+                  <ExternalLink className="w-4 h-4" />
                   Open Learning Resource
                 </a>
               </div>

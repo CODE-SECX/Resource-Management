@@ -4,8 +4,6 @@ import {
   type Learning,
   type Category,
   getSubcategories,
-  getTagsByCategory,
-  upsertSubcategoriesByNames,
   upsertTagsByNames,
   upsertCategoryTagsByNames,
   setLearningSubcategories,
@@ -18,6 +16,7 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
 import { SmartTagAssignment } from '../components/SmartTagAssignment';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
@@ -333,104 +332,101 @@ export function LearningForm() {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <Skeleton height={20} width={160} />
+        <Skeleton height={36} width={280} />
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-6">
+          <Skeleton height={44} className="w-full" />
+          <Skeleton height={44} className="w-full" />
+          <Skeleton height={120} className="w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen flex flex-col">
+    <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <div className="bg-gray-900/80 backdrop-blur border-b border-gray-700/50">
-        <div className="px-8 py-6">
-          <button
-            onClick={() => navigate('/learning')}
-            className="inline-flex items-center text-indigo-400 hover:text-indigo-300 transition-colors mb-3 font-medium"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Learning
-          </button>
-          <div>
-            <h1 className="text-4xl font-bold text-white">
-              {isEditing ? 'Edit Learning Item' : 'Create New Learning Item'}
-            </h1>
-            <p className="text-gray-400 mt-2">
-              {isEditing ? 'Update your learning resource' : 'Share a resource you want to remember'}
-            </p>
-          </div>
-        </div>
+      <button
+        onClick={() => navigate('/learning')}
+        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-150 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Learning
+      </button>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+          {isEditing ? 'Edit Learning Item' : 'Create New Learning Item'}
+        </h1>
+        <p className="mt-1 text-sm sm:text-base text-muted-foreground">
+          {isEditing ? 'Update your learning resource' : 'Share a resource you want to remember'}
+        </p>
       </div>
 
-      {/* Tab Toggle */}
-      <div className="bg-gray-800/60 border-b border-gray-700/50 px-0">
-        <div className="flex">
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl shadow-card overflow-hidden">
+        {/* Tab Toggle */}
+        <div className="flex border-b border-border">
           <button
+            type="button"
             onClick={() => setActiveTab('allFields')}
-            className={`flex-1 px-8 py-4 font-semibold text-lg transition-all duration-200 ease-in-out ${
+            className={`flex-1 px-4 sm:px-8 py-4 font-semibold text-sm sm:text-base transition-colors duration-200 ${
               activeTab === 'allFields'
-                ? 'text-white border-b-2 border-indigo-500 bg-gray-700/30'
-                : 'text-gray-400 border-b-2 border-transparent hover:text-gray-200'
+                ? 'text-primary border-b-2 border-primary bg-primary/5'
+                : 'text-muted-foreground border-b-2 border-transparent hover:text-foreground hover:bg-accent'
             }`}
           >
             All Fields
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('description')}
-            className={`flex-1 px-8 py-4 font-semibold text-lg transition-all duration-200 ease-in-out ${
+            className={`flex-1 px-4 sm:px-8 py-4 font-semibold text-sm sm:text-base transition-colors duration-200 ${
               activeTab === 'description'
-                ? 'text-white border-b-2 border-indigo-500 bg-gray-700/30'
-                : 'text-gray-400 border-b-2 border-transparent hover:text-gray-200'
+                ? 'text-primary border-b-2 border-primary bg-primary/5'
+                : 'text-muted-foreground border-b-2 border-transparent hover:text-foreground hover:bg-accent'
             }`}
           >
             Description
           </button>
         </div>
-      </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-        
         {/* ALL FIELDS SECTION */}
         {activeTab === 'allFields' && (
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="flex-shrink-0">
-              <div className="px-0 py-8">
-                <div className="px-8 pb-8">
-                  <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-                    <Lightbulb className="w-6 h-6 text-indigo-400" />
-                    Learning Details
-                  </h2>
-                </div>
-                
-                {/* Responsive Grid Layout: 1 col mobile, 2 cols tablet, 4 cols desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-8 pb-8">
+          <div className="p-6 sm:p-8">
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-primary" />
+              Learning Details
+            </h2>
+
+            {/* Responsive Grid Layout: 1 col mobile, 2 cols tablet, 4 cols desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               
               {/* Title - spans 2 columns */}
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-200 mb-3">
-                  Title <span className="text-red-400">*</span>
+              <div className="sm:col-span-2 form-group">
+                <label className="form-label">
+                  Title <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-700/50 text-gray-100 placeholder-gray-500"
+                  className="input-primary"
                   placeholder="Enter learning resource title"
                 />
               </div>
 
               {/* Difficulty Level - spans 1 column */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-200 mb-3">
-                  Difficulty <span className="text-red-400">*</span>
+              <div className="form-group">
+                <label className="form-label">
+                  Difficulty <span className="text-destructive">*</span>
                 </label>
                 <select
                   required
                   value={formData.difficulty_level}
                   onChange={(e) => setFormData(prev => ({ ...prev, difficulty_level: e.target.value as any }))}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-700/50 text-gray-100"
+                  className="input-primary"
                 >
                   {difficultyLevels.map((level) => (
                     <option key={level} value={level}>
@@ -441,29 +437,29 @@ export function LearningForm() {
               </div>
 
               {/* URL - spans 1 column */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-200 mb-3">
+              <div className="form-group">
+                <label className="form-label">
                   Resource URL
                 </label>
                 <input
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-700/50 text-gray-100 placeholder-gray-500"
+                  className="input-primary"
                   placeholder="https://example.com"
                 />
               </div>
 
               {/* Categories - spans 2 columns */}
               {allCategories.length > 0 && (
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                    <Folder className="w-4 h-4 text-indigo-400" />
+                <div className="sm:col-span-2 form-group">
+                  <label className="form-label flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-primary" />
                     Categories
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded-lg border border-border p-2">
                     {allCategories.map((category) => (
-                      <label key={category.id} className="flex items-center cursor-pointer group p-3 rounded hover:bg-gray-700/30 transition-all">
+                      <label key={category.id} className="flex items-center cursor-pointer group p-2 rounded-md hover:bg-accent transition-colors duration-150">
                         <input
                           type="checkbox"
                           checked={formData.categoryIds.includes(category.id)}
@@ -475,13 +471,13 @@ export function LearningForm() {
                                 : prev.categoryIds.filter(id => id !== category.id),
                             }));
                           }}
-                          className="rounded border-gray-500 text-indigo-600 focus:ring-indigo-500 bg-gray-700 cursor-pointer"
+                          className="rounded border-input text-primary focus:ring-ring/50 bg-background cursor-pointer"
                         />
                         <div
-                          className="ml-3 w-3 h-3 rounded-full"
+                          className="ml-3 w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: category.color }}
                         />
-                        <span className="ml-2 text-sm text-gray-200 group-hover:text-white transition-colors">{category.name}</span>
+                        <span className="ml-2 text-sm text-foreground transition-colors duration-150">{category.name}</span>
                       </label>
                     ))}
                   </div>
@@ -490,12 +486,12 @@ export function LearningForm() {
 
               {/* Subcategories - spans 2 columns */}
               {formData.categoryIds.length > 0 && (
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                    <Folder className="w-4 h-4 text-indigo-400" />
+                <div className="sm:col-span-2 form-group">
+                  <label className="form-label flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-primary" />
                     Subcategories
                   </label>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
+                  <div className="bg-muted/40 border border-border rounded-lg p-4">
                     <ColorCodedSubcategorySelector
                       availableSubcategories={availableSubcategoriesWithCategory}
                       selectedSubcategories={selectedFormSubcategories}
@@ -508,9 +504,9 @@ export function LearningForm() {
               )}
 
               {/* Tags - spans 2 columns */}
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-indigo-400" />
+              <div className="sm:col-span-2 form-group">
+                <label className="form-label flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-primary" />
                   Tags
                 </label>
                 {selectedFormTags.length > 0 && (
@@ -520,7 +516,7 @@ export function LearningForm() {
                         key={tag}
                         type="button"
                         onClick={() => setSelectedFormTags(prev => prev.filter(t => t !== tag))}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors duration-150"
                       >
                         {tag}
                         <X className="ml-1.5 w-3 h-3" />
@@ -535,35 +531,36 @@ export function LearningForm() {
                     value={tagInputValue}
                     onChange={(e) => handleTagInputChange(e.target.value)}
                     onKeyDown={handleTagInputKeyDown}
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-700/50 text-gray-100 placeholder-gray-500"
+                    className="input-primary"
                     placeholder="Type tags (press Enter to add)"
                   />
                   {showTagSuggestions && (
-                    <div className="absolute z-20 w-full mt-2 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <div className="absolute z-20 w-full mt-2 bg-popover border border-border rounded-lg shadow-dropdown max-h-40 overflow-y-auto">
                       {filteredTagSuggestions.map((tag) => (
                         <button
                           key={tag}
                           type="button"
                           onClick={() => addTagFromSuggestion(tag)}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center"
+                          className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-accent transition-colors duration-150 flex items-center"
                         >
-                          <Tag className="mr-2 w-3 h-3 text-gray-400" />
+                          <Tag className="mr-2 w-3 h-3 text-muted-foreground" />
                           {tag}
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
+                <p className="form-hint">Press Enter or comma to add a tag.</p>
               </div>
 
               {/* Smart Tag Assignment */}
               {selectedFormSubcategories.length > 0 && (
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <label className="block text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-indigo-400" />
+                <div className="sm:col-span-2 lg:col-span-4 form-group">
+                  <label className="form-label flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" />
                     Tag Assignment
                   </label>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
+                  <div className="bg-muted/40 border border-border rounded-lg p-4">
                     <SmartTagAssignment
                       selectedSubcategories={selectedFormSubcategories}
                       availableSubcategories={availableSubcategoriesWithCategory}
@@ -576,47 +573,43 @@ export function LearningForm() {
                 </div>
               )}
 
-                </div>
-              </div>
             </div>
           </div>
         )}
 
         {/* DESCRIPTION SECTION */}
         {activeTab === 'description' && (
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="flex-1 flex flex-col p-8 min-h-0">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3 flex-shrink-0">
-                <FileText className="w-6 h-6 text-indigo-400" />
-                Full Description
-              </h2>
-              
-              {/* Rich Text Editor Container - Auto-expanding */}
-              <div className="flex-1 bg-gray-700/30 border border-gray-600 rounded-xl overflow-visible shadow-md flex flex-col min-h-0">
-                <RichTextEditor
-                  value={formData.description}
-                  onChange={(content) => setFormData(prev => ({ ...prev, description: content }))}
-                />
-              </div>
+          <div className="p-6 sm:p-8">
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Full Description
+            </h2>
+
+            {/* Rich Text Editor Container - Auto-expanding */}
+            <div className="bg-card border border-border rounded-xl overflow-visible shadow-xs">
+              <RichTextEditor
+                value={formData.description}
+                onChange={(content) => setFormData(prev => ({ ...prev, description: content }))}
+              />
             </div>
           </div>
         )}
 
         {/* Bottom Action Bar */}
-        <div className="flex-shrink-0 bg-gray-900/95 backdrop-blur border-t border-gray-700/50 px-8 py-6 flex justify-between items-center">
+        <div className="sticky bottom-0 bg-card/95 backdrop-blur border-t border-border px-6 sm:px-8 py-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
           <button
             type="button"
             onClick={() => navigate('/learning')}
-            className="px-8 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-gray-500 transition-all font-semibold"
+            className="btn-secondary w-full sm:w-auto justify-center"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-10 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary w-full sm:w-auto justify-center"
           >
-            <Save className="w-5 h-5" />
+            <Save className="w-4 h-4" />
             {loading ? 'Saving...' : (isEditing ? 'Update Learning Item' : 'Create Learning Item')}
           </button>
         </div>

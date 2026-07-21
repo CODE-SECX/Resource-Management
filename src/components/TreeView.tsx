@@ -126,7 +126,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
     const after = label.slice(idx + q.length);
     return (
       <span>
-        {before}<span className="bg-yellow-500/30 rounded px-0.5">{hit}</span>{after}
+        {before}<span className="bg-warning/30 text-foreground rounded px-0.5">{hit}</span>{after}
       </span>
     );
   };
@@ -160,39 +160,24 @@ export const TreeView: React.FC<TreeViewProps> = ({
   const getNodeIcon = (node: TreeNode) => {
     switch (node.type) {
       case 'category':
-        return <FolderPlus className="w-4 h-4 text-blue-400" />;
+        return <FolderPlus className="w-4 h-4 text-primary" />;
       case 'subcategory':
-        return <Tag className="w-4 h-4 text-green-400" />;
+        return <Tag className="w-4 h-4 text-success" />;
       case 'tag':
-        return <Hash className="w-4 h-4 text-purple-400" />;
+        return <Hash className="w-4 h-4 text-primary/80" />;
       default:
         return <span className="w-4 h-4" />;
     }
   };
 
   const getNodeStyles = (node: TreeNode, depth: number) => {
-    const baseStyles = "group flex items-center gap-3 py-2.5 px-3 rounded-lg transition-all duration-200 outline-none border";
+    const baseStyles = "group flex items-center gap-3 min-h-[44px] py-2 px-3 rounded-lg transition-all duration-200 outline-none border border-transparent bg-card hover:bg-accent hover:border-border";
     const depthPadding = { paddingLeft: `${depth * 20 + 12}px` };
-    
-    let typeStyles = "";
-    switch (node.type) {
-      case 'category':
-        typeStyles = "bg-gradient-to-r from-blue-900/20 to-blue-800/10 border-blue-700/30 hover:from-blue-800/30 hover:to-blue-700/20 hover:border-blue-600/50";
-        break;
-      case 'subcategory':
-        typeStyles = "bg-gradient-to-r from-green-900/20 to-green-800/10 border-green-700/30 hover:from-green-800/30 hover:to-green-700/20 hover:border-green-600/50";
-        break;
-      case 'tag':
-        typeStyles = "bg-gradient-to-r from-purple-900/20 to-purple-800/10 border-purple-700/30 hover:from-purple-800/30 hover:to-purple-700/20 hover:border-purple-600/50";
-        break;
-      default:
-        typeStyles = "bg-gray-800/50 border-gray-700 hover:bg-gray-700/50";
-    }
-    
-    const focusStyles = focusId === node.id ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900" : "";
-    
+
+    const focusStyles = focusId === node.id ? "ring-2 ring-ring/60 ring-offset-2 ring-offset-background" : "";
+
     return {
-      className: `${baseStyles} ${typeStyles} ${focusStyles}`,
+      className: `${baseStyles} ${focusStyles}`,
       style: depthPadding
     };
   };
@@ -216,9 +201,10 @@ export const TreeView: React.FC<TreeViewProps> = ({
         >
           {/* Expand/Collapse Button */}
           <button
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-200 rounded transition-colors"
+            className="flex-shrink-0 p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none"
             onClick={() => toggleNode(node)}
             disabled={!hasChildren}
+            aria-label={hasChildren ? (expandedNow ? `Collapse ${node.label}` : `Expand ${node.label}`) : undefined}
             title={hasChildren ? (expandedNow ? 'Collapse' : 'Expand') : ''}
           >
             {hasChildren ? (
@@ -236,7 +222,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
           {/* Color Indicator for Subcategories */}
           {node.color && (
             <div 
-              className="w-3 h-3 rounded-full border-2 border-white/20 shadow-sm" 
+              className="w-3 h-3 rounded-full border-2 border-background shadow-sm shrink-0" 
               style={{ backgroundColor: node.color }}
               title={`Color: ${node.color}`}
             />
@@ -245,17 +231,17 @@ export const TreeView: React.FC<TreeViewProps> = ({
           {/* Node Label and Description */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-gray-100 font-medium text-sm truncate">
+              <span className="text-foreground font-medium text-sm truncate">
                 {renderLabelWithHighlight(node.label)}
               </span>
               {node.badgeText && (
-                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-900/50 text-indigo-200 border border-indigo-700/50">
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary border border-primary/20">
                   {node.badgeText}
                 </span>
               )}
             </div>
             {node.description && (
-              <div className="text-xs text-gray-400 mt-0.5 truncate">
+              <div className="text-xs text-muted-foreground mt-0.5 truncate">
                 {node.description}
               </div>
             )}
@@ -266,16 +252,17 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Copy button for tags */}
             {node.type === 'tag' && actions.onCopyTag && (
               <button 
-                className={`p-1.5 rounded transition-all duration-200 ${
+                className={`p-1.5 rounded-md transition-all duration-200 ${
                   copiedTagId === node.id 
-                    ? 'text-green-400 bg-green-900/30' 
-                    : 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-900/20'
+                    ? 'text-success bg-success/10' 
+                    : 'text-muted-foreground hover:text-primary hover:bg-accent'
                 }`}
                 onClick={() => {
                   actions.onCopyTag?.(node);
                   setCopiedTagId(node.id);
                   setTimeout(() => setCopiedTagId(null), 2000);
                 }} 
+                aria-label={`Copy tag ${node.label}`}
                 title="Copy tag name"
               >
                 {copiedTagId === node.id ? (
@@ -289,16 +276,17 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Copy all tags button for subcategories */}
             {node.type === 'subcategory' && actions.onCopyAllTags && (
               <button 
-                className={`p-1.5 rounded transition-all duration-200 ${
+                className={`p-1.5 rounded-md transition-all duration-200 ${
                   copiedAllTagsId === node.id 
-                    ? 'text-green-400 bg-green-900/30' 
-                    : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-900/20'
+                    ? 'text-success bg-success/10' 
+                    : 'text-muted-foreground hover:text-primary hover:bg-accent'
                 }`}
                 onClick={() => {
                   actions.onCopyAllTags?.(node);
                   setCopiedAllTagsId(node.id);
                   setTimeout(() => setCopiedAllTagsId(null), 3000);
                 }} 
+                aria-label={`Copy all tags from ${node.label}`}
                 title="Copy all tags (comma-separated)"
               >
                 {copiedAllTagsId === node.id ? (
@@ -312,8 +300,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Bulk add button for categories and subcategories */}
             {(node.type === 'category' || node.type === 'subcategory') && actions.onBulkAdd && (
               <button 
-                className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-yellow-900/20 rounded transition-all duration-200" 
+                className="p-1.5 text-muted-foreground hover:text-warning hover:bg-accent rounded-md transition-all duration-200" 
                 onClick={() => actions.onBulkAdd?.(node)} 
+                aria-label={`Bulk add tags to ${node.label}`}
                 title="Bulk add multiple tags"
               >
                 <PlusSquare className="w-4 h-4" />
@@ -323,8 +312,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Regular add button */}
             {actions.onAddChild && (
               <button 
-                className="p-1.5 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded transition-all duration-200" 
+                className="p-1.5 text-muted-foreground hover:text-success hover:bg-accent rounded-md transition-all duration-200" 
                 onClick={() => actions.onAddChild?.(node)} 
+                aria-label={`Add ${node.type === 'category' ? 'subcategory or tag' : node.type === 'subcategory' ? 'tag' : 'item'} to ${node.label}`}
                 title={`Add ${node.type === 'category' ? 'subcategory or tag' : node.type === 'subcategory' ? 'tag' : 'item'}`}
               >
                 <Plus className="w-4 h-4" />
@@ -334,8 +324,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Edit button */}
             {actions.onRename && (
               <button 
-                className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded transition-all duration-200" 
+                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-accent rounded-md transition-all duration-200" 
                 onClick={() => actions.onRename?.(node)} 
+                aria-label={`Edit ${node.label}`}
                 title="Edit"
               >
                 <Edit2 className="w-4 h-4" />
@@ -345,8 +336,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
             {/* Delete button */}
             {actions.onDelete && (
               <button 
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-all duration-200" 
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all duration-200" 
                 onClick={() => actions.onDelete?.(node)} 
+                aria-label={`Delete ${node.label}`}
                 title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -359,8 +351,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
         {expandedNow && (
           <div className="mt-1">
             {isLoading ? (
-              <div className="flex items-center gap-2 py-2 px-4 text-xs text-gray-400" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>
-                <div className="animate-spin rounded-full h-3 w-3 border border-indigo-600 border-t-transparent"></div>
+              <div className="flex items-center gap-2 py-2 px-4 text-xs text-muted-foreground" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>
+                <div className="loading-spinner h-3 w-3 border"></div>
                 Loading...
               </div>
             ) : (
@@ -377,7 +369,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
       <div className="max-h-[32rem] overflow-auto pr-2 space-y-1">
         {rootsFiltered.map(n => renderNode(n, 0))}
         {!rootsFiltered.length && (
-          <div className="text-center text-gray-400 py-8">
+          <div className="text-center text-muted-foreground py-8">
             <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <div className="text-sm">No results found</div>
             <div className="text-xs mt-1">Try adjusting your search terms</div>

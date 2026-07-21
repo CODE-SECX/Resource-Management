@@ -12,6 +12,7 @@ import {
   getStickyNotesStats 
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const StickyNotes: React.FC = () => {
   const { user } = useAuth();
@@ -40,12 +41,54 @@ const StickyNotes: React.FC = () => {
   });
 
   const colors = [
-    { name: 'yellow' as const, bg: 'bg-yellow-600/20', border: 'border-yellow-500/50', text: 'text-yellow-200' },
-    { name: 'pink' as const, bg: 'bg-pink-600/20', border: 'border-pink-500/50', text: 'text-pink-200' },
-    { name: 'blue' as const, bg: 'bg-blue-600/20', border: 'border-blue-500/50', text: 'text-blue-200' },
-    { name: 'green' as const, bg: 'bg-green-600/20', border: 'border-green-500/50', text: 'text-green-200' },
-    { name: 'purple' as const, bg: 'bg-purple-600/20', border: 'border-purple-500/50', text: 'text-purple-200' },
-    { name: 'orange' as const, bg: 'bg-orange-600/20', border: 'border-orange-500/50', text: 'text-orange-200' }
+    {
+      name: 'yellow' as const,
+      bg: 'bg-yellow-50 dark:bg-yellow-500/10',
+      border: 'border-yellow-300/80 dark:border-yellow-500/30',
+      text: 'text-yellow-900 dark:text-yellow-100',
+      swatch: 'bg-yellow-200 dark:bg-yellow-500/30 border-yellow-400 dark:border-yellow-500/50',
+      ring: 'ring-yellow-400'
+    },
+    {
+      name: 'pink' as const,
+      bg: 'bg-pink-50 dark:bg-pink-500/10',
+      border: 'border-pink-300/80 dark:border-pink-500/30',
+      text: 'text-pink-900 dark:text-pink-100',
+      swatch: 'bg-pink-200 dark:bg-pink-500/30 border-pink-400 dark:border-pink-500/50',
+      ring: 'ring-pink-400'
+    },
+    {
+      name: 'blue' as const,
+      bg: 'bg-blue-50 dark:bg-blue-500/10',
+      border: 'border-blue-300/80 dark:border-blue-500/30',
+      text: 'text-blue-900 dark:text-blue-100',
+      swatch: 'bg-blue-200 dark:bg-blue-500/30 border-blue-400 dark:border-blue-500/50',
+      ring: 'ring-blue-400'
+    },
+    {
+      name: 'green' as const,
+      bg: 'bg-green-50 dark:bg-green-500/10',
+      border: 'border-green-300/80 dark:border-green-500/30',
+      text: 'text-green-900 dark:text-green-100',
+      swatch: 'bg-green-200 dark:bg-green-500/30 border-green-400 dark:border-green-500/50',
+      ring: 'ring-green-400'
+    },
+    {
+      name: 'purple' as const,
+      bg: 'bg-purple-50 dark:bg-purple-500/10',
+      border: 'border-purple-300/80 dark:border-purple-500/30',
+      text: 'text-purple-900 dark:text-purple-100',
+      swatch: 'bg-purple-200 dark:bg-purple-500/30 border-purple-400 dark:border-purple-500/50',
+      ring: 'ring-purple-400'
+    },
+    {
+      name: 'orange' as const,
+      bg: 'bg-orange-50 dark:bg-orange-500/10',
+      border: 'border-orange-300/80 dark:border-orange-500/30',
+      text: 'text-orange-900 dark:text-orange-100',
+      swatch: 'bg-orange-200 dark:bg-orange-500/30 border-orange-400 dark:border-orange-500/50',
+      ring: 'ring-orange-400'
+    }
   ];
 
   useEffect(() => {
@@ -149,23 +192,51 @@ const StickyNotes: React.FC = () => {
     return colors.find(c => c.name === colorName) || colors[0];
   };
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingNote(null);
+    setFormData({ title: '', content: '', color: 'yellow', position_x: 0, position_y: 0, is_completed: false, is_pinned: false });
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-background">
+        <div className="bg-card shadow-card border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-2">
+                <Skeleton height={32} width={200} />
+                <Skeleton height={16} width={280} />
+              </div>
+              <Skeleton height={40} width={140} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} height={72} rounded="lg" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} height={220} rounded="xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-slate-800 shadow-sm border-b border-slate-700">
+      <div className="bg-card shadow-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Sticky Notes</h1>
-              <p className="text-slate-300">Capture your thoughts and tasks with colorful sticky notes</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Sticky Notes</h1>
+              <p className="mt-1 text-sm sm:text-base text-muted-foreground">Capture your thoughts and tasks with colorful sticky notes</p>
             </div>
             <button
               onClick={() => {
@@ -173,9 +244,9 @@ const StickyNotes: React.FC = () => {
                 setFormData({ title: '', content: '', color: 'yellow', position_x: 0, position_y: 0, is_completed: false, is_pinned: false });
                 setShowForm(true);
               }}
-              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              className="btn-primary self-start sm:self-auto"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Add Note
             </button>
           </div>
@@ -183,27 +254,27 @@ const StickyNotes: React.FC = () => {
           {/* Stats */}
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
-              <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
-                <div className="text-2xl font-bold text-white">{stats.total_notes}</div>
-                <div className="text-sm text-slate-300">Total Notes</div>
+              <div className="card p-4">
+                <div className="text-2xl font-bold text-foreground">{stats.total_notes}</div>
+                <div className="text-sm text-muted-foreground">Total Notes</div>
               </div>
-              <div className="bg-green-900/30 rounded-lg p-4 border border-green-700">
-                <div className="text-2xl font-bold text-green-400">{stats.completed_notes}</div>
-                <div className="text-sm text-green-300">Completed</div>
+              <div className="rounded-xl p-4 border bg-success/10 border-success/30">
+                <div className="text-2xl font-bold text-success">{stats.completed_notes}</div>
+                <div className="text-sm text-success/90">Completed</div>
               </div>
-              <div className="bg-blue-900/30 rounded-lg p-4 border border-blue-700">
-                <div className="text-2xl font-bold text-blue-400">{stats.pending_notes}</div>
-                <div className="text-sm text-blue-300">Pending</div>
+              <div className="rounded-xl p-4 border bg-primary/10 border-primary/30">
+                <div className="text-2xl font-bold text-primary">{stats.pending_notes}</div>
+                <div className="text-sm text-primary/90">Pending</div>
               </div>
-              <div className="bg-purple-900/30 rounded-lg p-4 border border-purple-700">
-                <div className="text-2xl font-bold text-purple-400">{stats.pinned_notes}</div>
-                <div className="text-sm text-purple-300">Pinned</div>
+              <div className="rounded-xl p-4 border bg-purple-500/10 border-purple-500/30">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">{stats.pinned_notes}</div>
+                <div className="text-sm text-purple-600/90 dark:text-purple-300/90">Pinned</div>
               </div>
-              <div className="bg-indigo-900/30 rounded-lg p-4 border border-indigo-700">
-                <div className="text-2xl font-bold text-indigo-400">
+              <div className="rounded-xl p-4 border bg-accent border-border">
+                <div className="text-2xl font-bold text-accent-foreground">
                   {Math.round((stats.completed_notes / stats.total_notes) * 100) || 0}%
                 </div>
-                <div className="text-sm text-indigo-300">Completion</div>
+                <div className="text-sm text-accent-foreground/80">Completion</div>
               </div>
             </div>
           )}
@@ -212,55 +283,53 @@ const StickyNotes: React.FC = () => {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="sticky-note-form-title">
+          <div className="bg-card rounded-xl shadow-modal w-full max-w-md border border-border animate-scale-in">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">
+                <h2 id="sticky-note-form-title" className="text-xl font-bold text-foreground">
                   {editingNote ? 'Edit Note' : 'New Note'}
                 </h2>
                 <button
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingNote(null);
-                    setFormData({ title: '', content: '', color: 'yellow', position_x: 0, position_y: 0, is_completed: false, is_pinned: false });
-                  }}
-                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  onClick={closeForm}
+                  className="p-2 hover:bg-accent rounded-lg transition-colors duration-150"
+                  aria-label="Close dialog"
                 >
-                  <X className="w-5 h-5 text-slate-400" />
+                  <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="form-group">
+                  <label className="form-label">
                     Title
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="input-primary"
                     placeholder="Note title..."
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="form-group">
+                  <label className="form-label">
                     Content
                   </label>
                   <textarea
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                    className="input-primary resize-none"
+                    rows={4}
                     placeholder="Note content..."
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="form-group">
+                  <label className="form-label">
                     Color
                   </label>
                   <div className="grid grid-cols-6 gap-2">
@@ -269,32 +338,30 @@ const StickyNotes: React.FC = () => {
                         key={color.name}
                         type="button"
                         onClick={() => setFormData({ ...formData, color: color.name })}
-                        className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                        className={`w-10 h-10 rounded-lg border-2 transition-all duration-150 ${color.swatch} ${
                           formData.color === color.name
-                            ? `${color.border} ring-2 ring-offset-2 ring-${color.name}-400`
-                            : `${color.border} hover:ring-1 hover:ring-offset-1 hover:ring-${color.name}-300`
-                        } ${color.bg}`}
+                            ? `ring-2 ring-offset-2 ring-offset-card ${color.ring}`
+                            : 'hover:opacity-80'
+                        }`}
+                        aria-label={`${color.name} color`}
+                        aria-pressed={formData.color === color.name}
                         title={color.name}
                       />
                     ))}
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingNote(null);
-                      setFormData({ title: '', content: '', color: 'yellow', position_x: 0, position_y: 0, is_completed: false, is_pinned: false });
-                    }}
-                    className="px-4 py-2 text-slate-300 hover:bg-slate-700 rounded-lg transition-colors"
+                    onClick={closeForm}
+                    className="btn-ghost"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="btn-primary"
                   >
                     {editingNote ? 'Update' : 'Create'}
                   </button>
@@ -308,17 +375,17 @@ const StickyNotes: React.FC = () => {
       {/* Sticky Notes Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {stickyNotes.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-700 rounded-lg mx-auto mb-4 flex items-center justify-center">
-              <Plus className="w-8 h-8 text-slate-400" />
+          <div className="text-center py-12 card">
+            <div className="w-16 h-16 bg-accent rounded-lg mx-auto mb-4 flex items-center justify-center">
+              <Plus className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">No sticky notes yet</h3>
-            <p className="text-slate-400 mb-4">Create your first sticky note to get started</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">No sticky notes yet</h3>
+            <p className="text-muted-foreground mb-4">Create your first sticky note to get started</p>
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="btn-primary inline-flex"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Create Note
             </button>
           </div>
@@ -331,21 +398,23 @@ const StickyNotes: React.FC = () => {
               return (
                 <div
                   key={note.id}
-                  className={`relative group ${isCompleting ? 'scale-95 opacity-50' : 'transition-all duration-300 hover:scale-105'}`}
+                  className={`relative group ${isCompleting ? 'scale-95 opacity-50' : 'transition-all duration-300 hover:-translate-y-0.5'}`}
                 >
                   <div
-                    className={`${colorClass.bg} ${colorClass.border} border-2 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 min-h-[220px] max-h-[300px] overflow-hidden flex flex-col ${
+                    className={`${colorClass.bg} ${colorClass.border} border rounded-xl p-4 shadow-card hover:shadow-card-hover transition-all duration-300 min-h-[220px] max-h-[300px] overflow-hidden flex flex-col ${
                       note.is_completed ? 'opacity-60' : ''
                     }`}
                   >
                     {/* Pin Button */}
                     <button
                       onClick={() => handleTogglePin(note.id)}
-                      className={`absolute -bottom-2 -right-2 p-1.5 rounded-full transition-all ${
+                      className={`absolute -bottom-2 -right-2 p-1.5 rounded-full border border-border shadow-xs transition-colors duration-150 ${
                         note.is_completed
-                          ? 'bg-green-500 text-white'
-                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                          ? 'bg-success text-success-foreground'
+                          : 'bg-card text-muted-foreground hover:text-foreground'
                       }`}
+                      aria-label={note.is_pinned ? 'Unpin note' : 'Pin note'}
+                      title={note.is_pinned ? 'Pinned' : 'Not pinned'}
                     >
                       {note.is_pinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
                     </button>
@@ -366,14 +435,15 @@ const StickyNotes: React.FC = () => {
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 mt-auto border-t border-current border-opacity-20">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleToggleComplete(note)}
-                          className={`p-1.5 rounded transition-all ${
+                          className={`p-1.5 rounded transition-colors duration-150 ${
                             note.is_completed
-                              ? 'bg-green-500 text-white hover:bg-green-600'
-                              : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                              ? 'bg-success text-success-foreground hover:bg-success/90'
+                              : 'bg-card text-muted-foreground hover:text-foreground border border-border'
                           }`}
+                          aria-label={note.is_completed ? 'Mark as pending' : 'Mark as completed'}
                           title={note.is_completed ? 'Mark as pending' : 'Mark as completed'}
                         >
                           <Check className="w-3 h-3" />
@@ -381,7 +451,8 @@ const StickyNotes: React.FC = () => {
                         
                         <button
                           onClick={() => handleEdit(note)}
-                          className="p-1.5 rounded bg-slate-600 text-slate-300 hover:bg-slate-500 transition-all"
+                          className="p-1.5 rounded bg-card text-muted-foreground hover:text-foreground border border-border transition-colors duration-150"
+                          aria-label="Edit note"
                           title="Edit note"
                         >
                           <Edit3 className="w-3 h-3" />
@@ -390,7 +461,8 @@ const StickyNotes: React.FC = () => {
 
                       <button
                         onClick={() => handleDelete(note.id)}
-                        className="p-1.5 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-all"
+                        className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors duration-150"
+                        aria-label="Delete note"
                         title="Delete note"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -405,8 +477,8 @@ const StickyNotes: React.FC = () => {
 
                   {/* Completion Animation */}
                   {isCompleting && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-green-500 bg-opacity-90 rounded-lg">
-                      <div className="text-white text-center">
+                    <div className="absolute inset-0 flex items-center justify-center bg-success/90 rounded-xl">
+                      <div className="text-success-foreground text-center">
                         <Check className="w-8 h-8 mx-auto mb-2" />
                         <div className="text-sm font-medium">Completed!</div>
                       </div>

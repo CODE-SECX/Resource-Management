@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, Loader2 } from 'lucide-react';
+import { BookOpen, Loader2, Lock, Mail, User as UserIcon, GraduationCap, Tags, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ThemeToggle } from './ui/ThemeToggle';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Button } from './ui/button';
 
 export function AuthForm() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -58,94 +62,149 @@ export function AuthForm() {
     }));
   };
 
+  const features = [
+    { icon: BookOpen, title: 'Centralize resources', desc: 'Keep every article, tool, and reference organized in one place.' },
+    { icon: GraduationCap, title: 'Track your learning', desc: 'Log courses and materials with difficulty and progress context.' },
+    { icon: Tags, title: 'Powerful taxonomy', desc: 'Categorize and tag everything for instant, precise retrieval.' },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 dark">
-      <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-lg shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-100">
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-300">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="font-medium text-indigo-400 hover:text-indigo-300 focus:outline-none focus:underline transition ease-in-out duration-150"
-            >
-              {isSignUp ? 'Sign in' : 'Sign up'}
-            </button>
-          </p>
+    <div className="min-h-screen flex bg-background">
+      {/* Left / brand panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-primary-900 text-white">
+        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:24px_24px]" />
+        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold tracking-tight">ResourceHub</span>
+          </div>
+
+          <div className="space-y-8 max-w-md">
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-white/15 rounded-full px-3 py-1">
+                <Sparkles className="w-3.5 h-3.5" /> Knowledge, organized
+              </span>
+              <h1 className="text-3xl xl:text-4xl font-bold leading-tight">
+                Your resources and learning, in one calm workspace.
+              </h1>
+              <p className="text-white/80 leading-relaxed">
+                A distraction-free platform to save, tag, and revisit everything you learn.
+              </p>
+            </div>
+            <div className="space-y-5">
+              {features.map((f) => (
+                <div key={f.title} className="flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                    <f.icon className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{f.title}</p>
+                    <p className="text-sm text-white/70 leading-relaxed">{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-white/60">© {new Date().getFullYear()} ResourceHub. All rights reserved.</p>
+        </div>
+      </div>
+
+      {/* Right / form panel */}
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between p-4 sm:p-6 lg:justify-end">
+          <div className="flex items-center gap-2 lg:hidden">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <BookOpen className="w-4.5 h-4.5 text-primary-foreground" />
+            </div>
+            <span className="text-lg font-bold text-foreground tracking-tight">ResourceHub</span>
+          </div>
+          <ThemeToggle />
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            {isSignUp && (
-              <div>
-                <label htmlFor="name" className="sr-only">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required={isSignUp}
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 placeholder-gray-400 text-gray-100 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm bg-gray-700"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            )}
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 pb-12">
+          <div className="w-full max-w-sm space-y-8">
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 placeholder-gray-400 text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                {isSignUp ? 'Create your account' : 'Welcome back'}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="font-medium text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:underline transition-colors duration-150"
+                >
+                  {isSignUp ? 'Sign in' : 'Sign up'}
+                </button>
+              </p>
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 placeholder-gray-400 text-gray-100 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : null}
-              {isSignUp ? 'Sign up' : 'Sign in'}
-            </button>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {isSignUp && (
+                <div className="form-group">
+                  <Label htmlFor="name">Full name</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required={isSignUp}
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Jane Doe"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="form-group">
+                <Label htmlFor="email-address">Email address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="you@company.com"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSignUp ? 'Create account' : 'Sign in'}
+              </Button>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

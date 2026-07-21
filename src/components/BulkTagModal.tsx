@@ -16,7 +16,6 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
   isOpen,
   onClose,
   parentName,
-  parentType,
   onSubmit,
   existingTags = []
 }) => {
@@ -156,12 +155,12 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
     <Modal isOpen={isOpen} onClose={handleClose} title={`Bulk Add Tags to "${parentName}"`} size="lg">
       <div className="space-y-4">
         {/* Instructions */}
-        <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 text-indigo-300 text-sm font-medium mb-1">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-primary text-sm font-medium mb-1">
             <Hash className="w-4 h-4" />
             Quick Tips
           </div>
-          <div className="text-xs text-indigo-200/80 space-y-1">
+          <div className="text-xs text-foreground/80 space-y-1">
             <div>• Type tag names and press Enter, or use commas to separate multiple</div>
             <div>• Paste comma-separated tags (like from "Copy All Tags") to add multiple at once</div>
             <div>• Supports various separators: commas, newlines, tabs, semicolons</div>
@@ -170,8 +169,8 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
         </div>
 
         {/* Tag Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+        <div className="form-group">
+          <label className="form-label">
             Add Tags
           </label>
           <div className="flex gap-2">
@@ -181,14 +180,15 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               onPaste={handlePasteAndSplit}
-              className="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-primary flex-1"
               placeholder="Enter tag name, use commas to separate multiple..."
               autoFocus
             />
             <button
               type="button"
               onClick={addTag}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              aria-label="Add tag to list"
+              className="btn-primary px-4"
               disabled={!tagInput.trim()}
             >
               <Plus className="w-4 h-4" />
@@ -199,36 +199,37 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
         {/* Tags Preview */}
         {tags.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="form-label">
               Tags to Create ({tags.length})
             </label>
-            <div className="max-h-48 overflow-auto bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+            <div className="max-h-48 overflow-auto bg-muted/40 rounded-lg p-3 border border-border">
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag, index) => {
                   const isDuplicate = existingTags.some(existing => existing.toLowerCase() === tag.toLowerCase());
                   return (
                     <div
                       key={index}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm ${
+                      className={`inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md text-sm border ${
                         isDuplicate 
-                          ? 'bg-yellow-900/30 text-yellow-200 border border-yellow-700/50'
-                          : 'bg-purple-900/30 text-purple-200 border border-purple-700/50'
+                          ? 'bg-warning/10 text-warning border-warning/30'
+                          : 'bg-primary/10 text-primary border-primary/20'
                       }`}
                     >
                       <Tag className="w-3 h-3" />
                       <span>{tag}</span>
                       {isDuplicate && (
-                        <span className="text-xs text-yellow-300" title="Already exists">
-                          ⚠️
+                        <span className="text-xs" title="Already exists" aria-label="Already exists">
+                          ⚠
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => removeTag(index)}
-                        className={`ml-1 ${
+                        aria-label={`Remove ${tag} from list`}
+                        className={`p-1 rounded-full transition-colors duration-150 ${
                           isDuplicate 
-                            ? 'text-yellow-300 hover:text-yellow-100'
-                            : 'text-purple-300 hover:text-purple-100'
+                            ? 'text-warning hover:bg-warning/20'
+                            : 'text-primary hover:bg-primary/20'
                         }`}
                       >
                         <X className="w-3 h-3" />
@@ -238,8 +239,8 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
                 })}
               </div>
               {tags.some(tag => existingTags.some(existing => existing.toLowerCase() === tag.toLowerCase())) && (
-                <div className="mt-2 text-xs text-yellow-300">
-                  ⚠️ Yellow tags already exist and will be skipped
+                <div className="mt-2 text-xs text-warning">
+                  ⚠ Tags marked in amber already exist and will be skipped
                 </div>
               )}
             </div>
@@ -251,7 +252,7 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+            className="btn-secondary"
             disabled={isSubmitting}
           >
             Cancel
@@ -259,7 +260,7 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary"
             disabled={isSubmitting || tags.length === 0}
           >
             {isSubmitting ? 'Creating...' : (() => {

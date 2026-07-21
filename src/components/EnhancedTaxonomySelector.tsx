@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Tag, X, Plus, Hash, Folder, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Tag, X, Plus, Hash, Folder, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { type Category, type Subcategory } from '../lib/supabase';
 
 interface SubcategoryWithCategory extends Subcategory {
@@ -32,7 +32,6 @@ export function EnhancedTaxonomySelector({
   allCategories,
   availableSubcategories,
   selectedSubcategories,
-  selectedTags,
   tagAssignments,
   onSubcategoryToggle,
   onTagAssignmentAdd,
@@ -109,15 +108,15 @@ export function EnhancedTaxonomySelector({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Folder className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-medium text-gray-300">Enhanced Taxonomy Selection</h3>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Folder className="w-5 h-5 text-primary shrink-0" />
+          <h3 className="text-lg font-medium text-foreground truncate">Enhanced Taxonomy Selection</h3>
         </div>
         {selectedSubcategories.length > 0 && (
           <button
             onClick={() => setShowTagAssignmentModal(true)}
-            className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="btn-primary shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Add Smart Tag</span>
@@ -128,34 +127,34 @@ export function EnhancedTaxonomySelector({
       {/* Categories and Subcategories */}
       <div className="space-y-4">
         {selectedCategoriesData.map(category => (
-          <div key={category.id} className="border border-gray-600 rounded-lg overflow-hidden">
+          <div key={category.id} className="border border-border rounded-lg overflow-hidden bg-card">
             {/* Category Header */}
             <div 
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-700/50 transition-colors"
-              style={{ backgroundColor: `${category.color}20`, borderLeft: `4px solid ${category.color}` }}
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/40 transition-colors duration-150"
+              style={{ borderLeft: `4px solid ${category.color}` }}
               onClick={() => toggleCategoryExpansion(category.id)}
             >
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className="w-4 h-4 rounded-full"
+                  className="w-4 h-4 shrink-0 rounded-full"
                   style={{ backgroundColor: category.color }}
                 ></div>
-                <h4 className="font-medium text-gray-200">{category.name}</h4>
-                <span className="text-sm text-gray-400">
+                <h4 className="font-medium text-foreground truncate">{category.name}</h4>
+                <span className="text-sm text-muted-foreground shrink-0">
                   ({subcategoriesByCategory[category.id]?.length || 0} subcategories)
                 </span>
               </div>
               {expandedCategories.has(category.id) ? (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
               ) : (
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
               )}
             </div>
 
             {/* Subcategories */}
             {expandedCategories.has(category.id) && subcategoriesByCategory[category.id] && (
-              <div className="p-4 bg-gray-800/30 space-y-3">
-                <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+              <div className="p-4 bg-muted/30 space-y-3">
+                <h5 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Subcategories
                 </h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -169,8 +168,8 @@ export function EnhancedTaxonomySelector({
                         <div
                           className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                             isSelected
-                              ? 'border-emerald-500 bg-emerald-500/10 shadow-md'
-                              : 'border-gray-600 hover:border-gray-500 bg-gray-700/50'
+                              ? 'border-success bg-success/10 shadow-card-hover'
+                              : 'border-border hover:border-success/40 bg-card'
                           }`}
                           style={{ 
                             borderLeftColor: subcategory.color || category.color,
@@ -179,23 +178,23 @@ export function EnhancedTaxonomySelector({
                           onClick={() => onSubcategoryToggle(subcategory.id)}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <div
-                                className="w-3 h-3 rounded-full"
+                                className="w-3 h-3 shrink-0 rounded-full"
                                 style={{ backgroundColor: subcategory.color || category.color }}
                               ></div>
-                              <span className="text-sm font-medium text-gray-200">
+                              <span className="text-sm font-medium text-foreground truncate">
                                 {subcategory.name}
                               </span>
                               {tagsForSubcategory.length > 0 && (
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-muted-foreground shrink-0">
                                   ({tagsForSubcategory.length} tags)
                                 </span>
                               )}
                             </div>
                             {isSelected && (
-                              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
+                              <div className="w-5 h-5 shrink-0 rounded-full bg-success flex items-center justify-center">
+                                <Check className="w-3 h-3 text-success-foreground" />
                               </div>
                             )}
                           </div>
@@ -203,22 +202,23 @@ export function EnhancedTaxonomySelector({
 
                         {/* Tags for this subcategory */}
                         {isSelected && tagsForSubcategory.length > 0 && (
-                          <div className="ml-4 pl-4 border-l-2 border-gray-600/30 space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <Hash className="w-3 h-3 text-gray-500" />
-                              <span className="text-xs text-gray-500 uppercase tracking-wide">Tags</span>
+                          <div className="ml-4 pl-4 border-l-2 border-border space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Hash className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground uppercase tracking-wide">Tags</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {tagsForSubcategory.map(assignment => (
                                 <div
                                   key={`${assignment.subcategoryId}-${assignment.tag}`}
-                                  className="flex items-center space-x-1 px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded-md text-xs border border-indigo-500/30"
+                                  className="category-tag gap-1 pr-1"
                                 >
                                   <Tag className="w-3 h-3" />
                                   <span>{assignment.tag}</span>
                                   <button
                                     onClick={() => onTagAssignmentRemove(assignment.tag, assignment.subcategoryId)}
-                                    className="text-indigo-400 hover:text-indigo-300"
+                                    aria-label={`Remove tag ${assignment.tag}`}
+                                    className="ml-0.5 p-1 rounded-full text-primary/70 hover:text-primary hover:bg-primary/20 transition-colors duration-150"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -239,91 +239,120 @@ export function EnhancedTaxonomySelector({
 
       {/* Tag Assignment Modal */}
       {showTagAssignmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl max-w-md w-full border border-gray-700">
-            <div className="p-6 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-100">Add Smart Tag</h3>
-              <p className="text-sm text-gray-400 mt-1">
-                Assign a tag to a specific subcategory
-              </p>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              {/* Tag Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Tag Name
-                </label>
-                <input
-                  type="text"
-                  value={newTagInput}
-                  onChange={(e) => setNewTagInput(e.target.value)}
-                  placeholder="Enter tag name..."
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
-                />
-              </div>
-
-              {/* Subcategory Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Assign to Subcategory
-                </label>
-                <select
-                  value={selectedSubcategoryForTag}
-                  onChange={(e) => setSelectedSubcategoryForTag(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Select subcategory...</option>
-                  {availableSubcategories
-                    .filter(sub => selectedSubcategories.includes(sub.id))
-                    .map(subcategory => (
-                      <option key={subcategory.id} value={subcategory.id}>
-                        {subcategory.category.name} → {subcategory.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {/* Available Tags Suggestions */}
-              {availableTags.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="smart-tag-modal-title"
+        >
+          <div className="flex min-h-full items-center justify-center p-4 text-center sm:items-center">
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity animate-fade-in"
+              onClick={() => {
+                setShowTagAssignmentModal(false);
+                setNewTagInput('');
+                setSelectedSubcategoryForTag('');
+              }}
+              aria-hidden="true"
+            />
+            <div className="animate-scale-in relative transform overflow-hidden rounded-xl bg-card text-left align-middle shadow-modal transition-all my-8 w-full max-w-md flex flex-col border border-border max-h-[90vh]">
+              <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6 border-b border-border shrink-0">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Or select from existing tags:
-                  </label>
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                    {availableTags.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => setNewTagInput(tag)}
-                        className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded border border-gray-600 hover:bg-gray-600 transition-colors"
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
+                  <h3 id="smart-tag-modal-title" className="text-lg font-semibold text-foreground">Add Smart Tag</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Assign a tag to a specific subcategory
+                  </p>
                 </div>
-              )}
-            </div>
+                <button
+                  onClick={() => {
+                    setShowTagAssignmentModal(false);
+                    setNewTagInput('');
+                    setSelectedSubcategoryForTag('');
+                  }}
+                  aria-label="Close dialog"
+                  className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent p-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="p-6 border-t border-gray-700 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowTagAssignmentModal(false);
-                  setNewTagInput('');
-                  setSelectedSubcategoryForTag('');
-                }}
-                className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddTagAssignment}
-                disabled={!newTagInput.trim() || !selectedSubcategoryForTag}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Add Tag
-              </button>
+              <div className="px-5 py-5 sm:px-6 space-y-4 overflow-y-auto text-left">
+                {/* Tag Input */}
+                <div className="form-group">
+                  <label className="form-label">
+                    Tag Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    placeholder="Enter tag name..."
+                    className="input-primary"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Subcategory Selection */}
+                <div className="form-group">
+                  <label className="form-label">
+                    Assign to Subcategory
+                  </label>
+                  <select
+                    value={selectedSubcategoryForTag}
+                    onChange={(e) => setSelectedSubcategoryForTag(e.target.value)}
+                    className="input-primary"
+                  >
+                    <option value="">Select subcategory...</option>
+                    {availableSubcategories
+                      .filter(sub => selectedSubcategories.includes(sub.id))
+                      .map(subcategory => (
+                        <option key={subcategory.id} value={subcategory.id}>
+                          {subcategory.category.name} → {subcategory.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Available Tags Suggestions */}
+                {availableTags.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">
+                      Or select from existing tags:
+                    </label>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {availableTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setNewTagInput(tag)}
+                          className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded border border-border hover:bg-secondary/70 transition-colors duration-150"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-4 sm:px-6 border-t border-border flex justify-end gap-3 shrink-0">
+                <button
+                  onClick={() => {
+                    setShowTagAssignmentModal(false);
+                    setNewTagInput('');
+                    setSelectedSubcategoryForTag('');
+                  }}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddTagAssignment}
+                  disabled={!newTagInput.trim() || !selectedSubcategoryForTag}
+                  className="btn-primary"
+                >
+                  Add Tag
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -331,8 +360,8 @@ export function EnhancedTaxonomySelector({
 
       {/* Summary */}
       {tagAssignments.length > 0 && (
-        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-300 mb-3">Tag Assignment Summary</h4>
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-primary mb-3">Tag Assignment Summary</h4>
           <div className="space-y-2">
             {Object.entries(
               tagAssignments.reduce((acc, assignment) => {
@@ -347,13 +376,13 @@ export function EnhancedTaxonomySelector({
                 return acc;
               }, {} as Record<string, { color: string; tags: string[] }>)
             ).map(([subcategoryPath, { color, tags }]) => (
-              <div key={subcategoryPath} className="flex items-center space-x-2">
+              <div key={subcategoryPath} className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: color }}
                 ></div>
-                <span className="text-sm text-gray-300">{subcategoryPath}:</span>
-                <span className="text-sm text-blue-300">{tags.join(', ')}</span>
+                <span className="text-sm text-foreground">{subcategoryPath}:</span>
+                <span className="text-sm text-primary">{tags.join(', ')}</span>
               </div>
             ))}
           </div>

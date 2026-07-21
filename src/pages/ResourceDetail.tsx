@@ -106,23 +106,23 @@ export function ResourceDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="loading-spinner h-8 w-8" role="status" aria-label="Loading" />
       </div>
     );
   }
 
   if (!resource) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-100 mb-2">Resource not found</h2>
-          <p className="text-gray-400 mb-4">The resource you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Resource not found</h2>
+          <p className="text-muted-foreground mb-6">The resource you're looking for doesn't exist.</p>
           <Link
             to="/resources"
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="btn-primary"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4" />
             Back to Resources
           </Link>
         </div>
@@ -131,36 +131,41 @@ export function ResourceDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-full sm:max-w-full md:max-w-full lg:max-w-7xl xl:max-w-7xl">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header with back button */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
           <Link
             to="/resources"
-            className="inline-flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors duration-150 text-sm font-medium"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Resources
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden xs:inline">Back to Resources</span>
+            <span className="xs:hidden">Back</span>
           </Link>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center gap-1">
             <button
               onClick={() => window.open(`/resources/${resource.id}/edit`, '_blank')}
-              className="p-2 text-gray-400 hover:text-indigo-400 rounded-lg hover:bg-gray-800 transition-colors"
+              className="p-2.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-accent transition-colors duration-150"
               title="Edit"
+              aria-label="Edit resource"
             >
               <Edit2 className="w-5 h-5" />
             </button>
             <button
               onClick={handleShare}
-              className="p-2 text-gray-400 hover:text-green-400 rounded-lg hover:bg-gray-800 transition-colors"
+              className="p-2.5 text-muted-foreground hover:text-success rounded-lg hover:bg-accent transition-colors duration-150"
               title="Share this resource"
+              aria-label="Share resource"
             >
               <Share2 className="w-5 h-5" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-800 transition-colors"
+              className="p-2.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-accent transition-colors duration-150"
+              title="Delete"
+              aria-label="Delete resource"
             >
               <Trash2 className="w-5 h-5" />
             </button>
@@ -169,31 +174,32 @@ export function ResourceDetail() {
 
         {/* Share Link Modal */}
         {shareLink && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-100 mb-4">Share Resource</h3>
-              <p className="text-gray-400 text-sm mb-4">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-card rounded-xl shadow-modal border border-border max-w-md w-full p-6 animate-scale-in">
+              <h3 className="text-lg font-semibold text-foreground mb-3">Share Resource</h3>
+              <p className="text-muted-foreground text-sm mb-4">
                 Anyone with this link can view this resource without logging in.
               </p>
-              <div className="flex items-center space-x-2 mb-6">
+              <div className="flex items-center gap-2 mb-6">
                 <input
                   type="text"
                   value={shareLink}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 min-w-0 px-3 py-2 bg-secondary/60 border border-input rounded-lg text-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 />
                 <button
                   onClick={copyToClipboard}
-                  className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="p-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors duration-150 shrink-0"
                   title={isCopied ? 'Copied!' : 'Copy link'}
+                  aria-label="Copy link"
                 >
                   {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                 </button>
               </div>
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end">
                 <button
                   onClick={() => setShareLink('')}
-                  className="px-4 py-2 text-gray-400 hover:text-gray-200 transition-colors"
+                  className="btn-ghost"
                 >
                   Close
                 </button>
@@ -203,75 +209,75 @@ export function ResourceDetail() {
         )}
 
         {/* Main Content */}
-        <article className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+        <article className="bg-card rounded-xl shadow-card border border-border">
           {/* Article Header */}
-          <header className="p-8 lg:p-10 border-b border-gray-700">
-            <h1 className="text-4xl font-bold text-gray-50 mb-6 leading-tight">
-              {resource.title}
-            </h1>
-            
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                Added: {new Date(resource.created_at).toLocaleDateString()}
+          <header className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 border-b border-border">
+            <div className="max-w-reading mx-auto">
+              <h1 className="font-sans text-3xl sm:text-4xl font-bold text-foreground mb-5 leading-tight tracking-tight">
+                {resource.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Added {new Date(resource.created_at).toLocaleDateString()}
+                </div>
+
+                <div className="flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Resource
+                </div>
               </div>
-              
-              <div className="flex items-center">
-                <FileText className="w-4 h-4 mr-2" />
-                Resource
-              </div>
+
+              {/* Categories */}
+              {resource.categories && resource.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {resource.categories.map((category) => (
+                    <span
+                      key={category.id}
+                      className="inline-block px-3 py-1 text-xs font-semibold text-white rounded-full shadow-xs"
+                      style={{ backgroundColor: category.color }}
+                    >
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Tags */}
+              {resource.tags && resource.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {resource.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full"
+                    >
+                      <Tag className="w-3 h-3 mr-1" />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Categories */}
-            {resource.categories && resource.categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {resource.categories.map((category) => (
-                  <span
-                    key={category.id}
-                    className="inline-block px-3 py-1 text-sm font-medium text-white rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  >
-                    {category.name}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Tags */}
-            {resource.tags && resource.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {resource.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1 text-sm font-medium bg-gray-700 text-gray-200 rounded-full"
-                  >
-                    <Tag className="w-3 h-3 mr-1" />
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </header>
 
-          {/* Article Content */}
-          <div className="p-8 lg:p-10">
-            <div className="prose prose-invert prose-slate prose-lg max-w-full prose-p:my-3 prose-p:leading-7 prose-li:my-1 prose-headings:mt-8 prose-headings:mb-3 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg break-words">
-              <div 
-                className="text-gray-100"
-                dangerouslySetInnerHTML={{ __html: resource.description || '' }}
-              />
-            </div>
+          {/* Article Content — Medium-style reading experience */}
+          <div className="px-6 sm:px-10 py-8 sm:py-12">
+            <div
+              className="article-content"
+              dangerouslySetInnerHTML={{ __html: resource.description || '' }}
+            />
 
             {/* Action Button */}
             {resource.url && (
-              <div className="mt-8 pt-6 border-t border-gray-700">
+              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border">
                 <a
                   href={resource.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="btn-primary"
                 >
-                  <ExternalLink className="w-5 h-5 mr-2" />
+                  <ExternalLink className="w-4 h-4" />
                   Visit Resource
                 </a>
               </div>

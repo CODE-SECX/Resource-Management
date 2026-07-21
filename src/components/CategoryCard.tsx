@@ -1,4 +1,4 @@
-import React from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface CategoryCardProps {
   title: string;
@@ -20,59 +20,46 @@ export function CategoryCard({
   onDelete
 }: CategoryCardProps) {
   return (
-    <div className="card">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center" 
-               style={{ backgroundColor: 'var(--accent)' }}>
-            <span className="text-white text-xl">{icon}</span>
+    <div className="card card-hover card-body">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center min-w-0">
+          <div className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center bg-primary/10">
+            <span className="text-primary text-lg font-semibold">{icon}</span>
           </div>
-          <div className="ml-4">
-            <h3 style={{ color: 'var(--text-primary)' }} className="text-lg font-semibold">
+          <div className="ml-4 min-w-0">
+            <h3 className="text-lg font-semibold text-foreground truncate">
               {title}
             </h3>
-            <div className="mt-1 flex items-center space-x-4">
-              <span style={{ color: 'var(--text-secondary)' }}>
-                Total Items: {totalItems}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>
-                Learning: {learningItems}
-              </span>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <span>Total Items: {totalItems}</span>
+              <span>Learning: {learningItems}</span>
             </div>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center gap-1 shrink-0">
           {onEdit && (
-            <button onClick={onEdit}
-                    className="p-2 rounded-md hover:bg-opacity-80 transition-colors"
-                    style={{ backgroundColor: 'var(--dark-surface-2)' }}>
-              <span className="sr-only">Edit</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+            <button
+              onClick={onEdit}
+              aria-label={`Edit ${title}`}
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+            >
+              <Pencil className="w-4 h-4" />
             </button>
           )}
           {onDelete && (
-            <button onClick={onDelete}
-                    className="p-2 rounded-md hover:bg-opacity-80 transition-colors"
-                    style={{ backgroundColor: 'var(--dark-surface-2)' }}>
-              <span className="sr-only">Delete</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+            <button
+              onClick={onDelete}
+              aria-label={`Delete ${title}`}
+              className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
       <div className="mt-4">
-        <div className="flex items-center space-x-2">
-          <span className="px-2 py-1 text-sm rounded-md" 
-                style={{ 
-                  backgroundColor: 'var(--dark-surface-2)',
-                  color: 'var(--text-secondary)'
-                }}>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-muted text-muted-foreground">
             Resources: {resources}
           </span>
         </div>

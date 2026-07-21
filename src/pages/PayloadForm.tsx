@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { 
-  supabase, 
-  type Payload, 
   createPayload, 
   updatePayload, 
   getPayload,
-  getPayloadCategories,
   getPayloadSubcategories,
   getPayloadTags
 } from '../lib/supabase';
@@ -27,6 +24,7 @@ import {
   Code
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const severityOptions = [
   { value: 'critical', label: 'Critical', color: 'bg-red-500', icon: AlertTriangle },
@@ -182,7 +180,7 @@ export function PayloadForm() {
       ]);
       
       setAvailableSubcategories(prev => [...new Set([...prev, ...subs])]);
-      setAvailableTags(prev => [...new Set([...commonTags, ...tags])]);
+      setAvailableTags(_prev => [...new Set([...commonTags, ...tags])]);
     } catch (error) {
       console.error('Error fetching available options:', error);
     }
@@ -268,85 +266,91 @@ export function PayloadForm() {
 
   if (fetching) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Skeleton height={40} width={240} className="mb-8" />
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} height={140} rounded="xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto px-4 py-8 max-w-full sm:max-w-full md:max-w-full lg:max-w-4xl xl:max-w-4xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Link
-              to="/payloads"
-              className="inline-flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Payloads
-            </Link>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center">
-                <Code className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-100">
-                {action === 'edit' ? 'Edit Payload' : 'Create New Payload'}
-              </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+          <Link
+            to="/payloads"
+            className="inline-flex items-center px-3 py-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors duration-150 w-fit"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Payloads
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Code className="w-5 h-5 text-primary" />
             </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+              {action === 'edit' ? 'Edit Payload' : 'Create New Payload'}
+            </h1>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Basic Information</h2>
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Basic Information</h2>
             
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Title *
+            <div className="grid grid-cols-1 gap-5">
+              <div className="form-group">
+                <label className="form-label">
+                  Title <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                   placeholder="e.g., SQL Injection Union-based Payload"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="form-group">
+                <label className="form-label">
                   Description
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                   rows={3}
                   placeholder="Describe what this payload does, when to use it, and any special considerations..."
                 />
+                <p className="form-hint">Optional context to help you remember when and how to use this payload.</p>
               </div>
             </div>
           </div>
 
           {/* Payload Content */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Payload Content</h2>
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Payload Content</h2>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Payload *
+            <div className="form-group">
+              <label className="form-label">
+                Payload <span className="text-destructive">*</span>
               </label>
               <textarea
                 value={formData.payload}
                 onChange={(e) => setFormData(prev => ({ ...prev, payload: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="input-primary font-mono text-sm"
                 rows={8}
                 placeholder="Enter your payload here..."
                 required
@@ -355,18 +359,18 @@ export function PayloadForm() {
           </div>
 
           {/* Classification */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Classification</h2>
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Classification</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Category *
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="form-group">
+                <label className="form-label">
+                  Category <span className="text-destructive">*</span>
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                   required
                 >
                   <option value="">Select a category</option>
@@ -376,14 +380,14 @@ export function PayloadForm() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="form-group">
+                <label className="form-label">
                   Severity
                 </label>
                 <select
                   value={formData.severity}
                   onChange={(e) => setFormData(prev => ({ ...prev, severity: e.target.value as any }))}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                 >
                   {severityOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -391,14 +395,14 @@ export function PayloadForm() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="form-group">
+                <label className="form-label">
                   Target Type
                 </label>
                 <select
                   value={formData.target_type}
                   onChange={(e) => setFormData(prev => ({ ...prev, target_type: e.target.value as any }))}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                 >
                   {targetTypeOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -406,48 +410,49 @@ export function PayloadForm() {
                 </select>
               </div>
 
-              <div className="flex items-center space-x-6">
-                <label className="flex items-center">
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_favorite}
                     onChange={(e) => setFormData(prev => ({ ...prev, is_favorite: e.target.checked }))}
-                    className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-border text-primary focus:ring-ring/60"
                   />
-                  <span className="text-gray-300">Favorite</span>
+                  <span className="text-foreground text-sm">Favorite</span>
                 </label>
                 
-                <label className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_private}
                     onChange={(e) => setFormData(prev => ({ ...prev, is_private: e.target.checked }))}
-                    className="mr-2 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-border text-primary focus:ring-ring/60"
                   />
-                  <span className="text-gray-300">Private</span>
+                  <span className="text-foreground text-sm">Private</span>
                 </label>
               </div>
             </div>
           </div>
 
           {/* Subcategories */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Subcategories</h2>
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Subcategories</h2>
             
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={newSubcategory}
                   onChange={(e) => setNewSubcategory(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary flex-1"
                   placeholder="Add a subcategory..."
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubcategory())}
                 />
                 <button
                   type="button"
                   onClick={addSubcategory}
-                  className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="btn-primary !px-3"
+                  aria-label="Add subcategory"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -467,9 +472,9 @@ export function PayloadForm() {
                           ...prev,
                           subcategories: [...prev.subcategories, sub]
                         }))}
-                        className="px-3 py-1 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                        className="inline-flex items-center px-3 py-1 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/70 transition-colors duration-150 text-sm border border-border"
                       >
-                        <Plus className="w-3 h-3 mr-1 inline" />
+                        <Plus className="w-3 h-3 mr-1" />
                         {sub}
                       </button>
                     ))}
@@ -482,14 +487,15 @@ export function PayloadForm() {
                   {formData.subcategories.map(sub => (
                     <span
                       key={sub}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-600 text-white"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary text-primary-foreground"
                     >
                       <Tag className="w-3 h-3 mr-1" />
                       {sub}
                       <button
                         type="button"
                         onClick={() => removeSubcategory(sub)}
-                        className="ml-2 hover:text-indigo-200"
+                        className="ml-2 hover:text-primary-foreground/70"
+                        aria-label={`Remove ${sub}`}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -501,23 +507,24 @@ export function PayloadForm() {
           </div>
 
           {/* Tags */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Tags</h2>
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Tags</h2>
             
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary flex-1"
                   placeholder="Add a tag..."
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 />
                 <button
                   type="button"
                   onClick={addTag}
-                  className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="btn-primary !px-3"
+                  aria-label="Add tag"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -536,9 +543,9 @@ export function PayloadForm() {
                         ...prev,
                         tags: [...prev.tags, tag]
                       }))}
-                      className="px-3 py-1 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                      className="inline-flex items-center px-3 py-1 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/70 transition-colors duration-150 text-sm border border-border"
                     >
-                      <Plus className="w-3 h-3 mr-1 inline" />
+                      <Plus className="w-3 h-3 mr-1" />
                       {tag}
                     </button>
                   ))}
@@ -550,14 +557,15 @@ export function PayloadForm() {
                   {formData.tags.map(tag => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300"
+                      className="category-tag"
                     >
                       <Tag className="w-3 h-3 mr-1" />
                       {tag}
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
-                        className="ml-2 hover:text-gray-100"
+                        className="ml-2 hover:text-primary/70"
+                        aria-label={`Remove ${tag}`}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -569,19 +577,19 @@ export function PayloadForm() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex items-center justify-end space-x-4">
+          <div className="flex items-center justify-end gap-4">
             <Link
               to="/payloads"
-              className="px-6 py-2 text-gray-400 hover:text-gray-200 transition-colors"
+              className="px-6 py-2 text-muted-foreground hover:text-foreground transition-colors duration-150"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4" />
               {loading ? 'Saving...' : (action === 'edit' ? 'Update Payload' : 'Create Payload')}
             </button>
           </div>

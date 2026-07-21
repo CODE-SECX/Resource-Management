@@ -46,14 +46,15 @@ export function SmartTagSelector({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Hash className="w-4 h-4 text-indigo-400" />
-          <h3 className="text-sm font-medium text-gray-300">Smart Tags</h3>
+        <div className="flex items-center gap-2">
+          <Hash className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-medium text-foreground">Smart Tags</h3>
         </div>
         <button
           type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="p-1 text-gray-400 hover:text-indigo-400 transition-colors"
+          aria-label="Add new tag"
+          className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors duration-150"
         >
           <Plus className="w-4 h-4" />
         </button>
@@ -61,7 +62,7 @@ export function SmartTagSelector({
 
       {/* Add New Tag Form */}
       {showAddForm && (
-        <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+        <div className="bg-muted/40 rounded-lg p-4 border border-border">
           <div className="space-y-3">
             <input
               type="text"
@@ -69,19 +70,19 @@ export function SmartTagSelector({
               onChange={(e) => setNewTagInput(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Enter new tag name..."
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-primary"
               autoFocus
             />
             
             {selectedSubcategories.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-2">
+                <label className="block text-xs font-medium text-muted-foreground mb-2">
                   Associate with subcategory (optional):
                 </label>
                 <select
                   value={selectedSubcategoryForNewTag}
                   onChange={(e) => setSelectedSubcategoryForNewTag(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                 >
                   <option value="">Category-level tag</option>
                   {selectedSubcategories.map(subId => (
@@ -93,12 +94,12 @@ export function SmartTagSelector({
               </div>
             )}
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleAddTag}
                 disabled={!newTagInput.trim()}
-                className="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary px-3 py-1.5 text-sm"
               >
                 Add Tag
               </button>
@@ -109,7 +110,7 @@ export function SmartTagSelector({
                   setNewTagInput('');
                   setSelectedSubcategoryForNewTag('');
                 }}
-                className="px-3 py-1 bg-gray-600 text-gray-300 rounded-md text-sm hover:bg-gray-500"
+                className="btn-secondary px-3 py-1.5 text-sm"
               >
                 Cancel
               </button>
@@ -121,7 +122,7 @@ export function SmartTagSelector({
       {/* Available Tags */}
       {availableTags.length > 0 && (
         <div>
-          <p className="text-xs text-gray-400 mb-2">Available tags:</p>
+          <p className="text-xs text-muted-foreground mb-2">Available tags:</p>
           <div className="flex flex-wrap gap-2">
             {availableTags.map(tag => (
               <button
@@ -130,8 +131,8 @@ export function SmartTagSelector({
                 onClick={() => onTagToggle(tag)}
                 className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   selectedTags.includes(tag)
-                    ? 'bg-indigo-600 text-white border border-indigo-500'
-                    : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
+                    ? 'bg-primary text-primary-foreground border border-primary'
+                    : 'bg-card text-foreground border border-border hover:bg-accent'
                 }`}
               >
                 <Tag className="w-3 h-3 mr-1" />
@@ -148,19 +149,20 @@ export function SmartTagSelector({
       {/* Selected Tags */}
       {selectedTags.length > 0 && (
         <div>
-          <p className="text-xs text-gray-400 mb-2">Selected tags ({selectedTags.length}):</p>
+          <p className="text-xs text-muted-foreground mb-2">Selected tags ({selectedTags.length}):</p>
           <div className="flex flex-wrap gap-2">
             {selectedTags.map(tag => (
               <span
                 key={tag}
-                className="inline-flex items-center px-3 py-1.5 bg-indigo-600/20 text-indigo-300 rounded-lg text-sm border border-indigo-500/30"
+                className="category-tag gap-1 pr-1"
               >
-                <Tag className="w-3 h-3 mr-1" />
+                <Tag className="w-3 h-3" />
                 {tag}
                 <button
                   type="button"
                   onClick={() => onTagToggle(tag)}
-                  className="ml-2 text-indigo-400 hover:text-indigo-300"
+                  aria-label={`Remove tag ${tag}`}
+                  className="ml-1 p-1 rounded-full text-primary/70 hover:text-primary hover:bg-primary/20 transition-colors duration-150"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -172,12 +174,12 @@ export function SmartTagSelector({
 
       {/* Smart Suggestions */}
       {selectedSubcategories.length > 0 && (
-        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <Folder className="w-4 h-4 text-blue-400" />
-            <p className="text-xs font-medium text-blue-300">Smart Association</p>
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Folder className="w-4 h-4 text-primary" />
+            <p className="text-xs font-medium text-primary">Smart Association</p>
           </div>
-          <p className="text-xs text-blue-200">
+          <p className="text-xs text-foreground">
             New tags will be intelligently associated with your selected subcategories: {' '}
             <span className="font-medium">
               {selectedSubcategories.map(subId => subcategoryNames[subId] || subId).join(', ')}

@@ -96,15 +96,15 @@ export const TaxonomyModal: React.FC<TaxonomyModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={getTitle()} size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+        <div className="form-group">
+          <label className="form-label">
             Name *
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="input-primary"
             placeholder="Enter name..."
             required
             autoFocus
@@ -112,14 +112,14 @@ export const TaxonomyModal: React.FC<TaxonomyModalProps> = ({
         </div>
 
         {showDescription && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+          <div className="form-group">
+            <label className="form-label">
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-primary"
               placeholder="Enter description (optional)..."
               rows={3}
             />
@@ -127,8 +127,8 @@ export const TaxonomyModal: React.FC<TaxonomyModalProps> = ({
         )}
 
         {showColorPicker && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+          <div className="form-group">
+            <label className="form-label">
               Color
             </label>
             <div className="flex items-center gap-3">
@@ -136,9 +136,10 @@ export const TaxonomyModal: React.FC<TaxonomyModalProps> = ({
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-16 p-1 bg-gray-700 border border-gray-600 rounded cursor-pointer"
+                aria-label="Custom color"
+                className="h-10 w-16 p-1 bg-card border border-input rounded-lg cursor-pointer"
               />
-              <span className="text-sm text-gray-400">{color}</span>
+              <span className="text-sm text-muted-foreground">{color}</span>
             </div>
           </div>
         )}
@@ -147,14 +148,14 @@ export const TaxonomyModal: React.FC<TaxonomyModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+            className="btn-secondary"
             disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Saving...' : data?.editItem ? 'Update' : 'Create'}

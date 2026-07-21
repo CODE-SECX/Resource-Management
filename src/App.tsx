@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthForm } from './components/AuthForm';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -26,8 +27,8 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="loading-spinner h-8 w-8" role="status" aria-label="Loading" />
       </div>
     );
   }
@@ -74,23 +75,48 @@ function PublicRoutes() {
   );
 }
 
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme();
+
+  return (
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        duration: 3500,
+        style: {
+          background: resolvedTheme === 'dark' ? 'hsl(222 40% 12%)' : 'hsl(0 0% 100%)',
+          color: resolvedTheme === 'dark' ? 'hsl(210 30% 96%)' : 'hsl(222 47% 11%)',
+          border: `1px solid ${resolvedTheme === 'dark' ? 'hsl(217 28% 20%)' : 'hsl(214 25% 89%)'}`,
+          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.15)',
+          borderRadius: '0.75rem',
+          fontSize: '0.875rem',
+        },
+        success: { iconTheme: { primary: '#16a34a', secondary: 'white' } },
+        error: { iconTheme: { primary: '#dc2626', secondary: 'white' } },
+      }}
+    />
+  );
+}
+
 function App() {
   return (
-    <div className="min-h-screen bg-gray-900">
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
-        <AuthProvider>
-          <Routes>
-            <Route path="/share/*" element={<PublicRoutes />} />
-            <Route path="/*" element={<AppRoutes />} />
-          </Routes>
-          <Toaster position="top-right" />
-        </AuthProvider>
-      </BrowserRouter>
+    <div className="min-h-screen bg-background text-foreground">
+      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <AuthProvider>
+            <Routes>
+              <Route path="/share/*" element={<PublicRoutes />} />
+              <Route path="/*" element={<AppRoutes />} />
+            </Routes>
+            <ThemedToaster />
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </div>
   );
 }

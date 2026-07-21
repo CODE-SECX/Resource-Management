@@ -85,7 +85,7 @@ export function SmartTagAssignment({
 
   if (selectedSubcategories.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p>Select subcategories first to assign tags</p>
       </div>
@@ -95,15 +95,15 @@ export function SmartTagAssignment({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Target className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-medium text-gray-300">Smart Tag Assignment</h3>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Target className="w-5 h-5 text-primary shrink-0" />
+          <h3 className="text-lg font-medium text-foreground truncate">Smart Tag Assignment</h3>
         </div>
         <button
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="btn-primary shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Add Tag</span>
@@ -112,28 +112,28 @@ export function SmartTagAssignment({
 
       {/* Add Tag Form */}
       {showAddForm && (
-        <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600 space-y-4">
-          <h4 className="text-sm font-medium text-gray-300">Add New Tag</h4>
+        <div className="bg-muted/40 rounded-lg p-4 border border-border space-y-4">
+          <h4 className="text-sm font-medium text-foreground">Add New Tag</h4>
           
           {/* Tag Input */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Tag Name</label>
+          <div className="form-group">
+            <label className="form-label">Tag Name</label>
             <input
               type="text"
               value={newTagInput}
               onChange={(e) => setNewTagInput(e.target.value)}
               placeholder="Enter tag name..."
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-primary"
               autoFocus
             />
           </div>
 
           {/* Assignment Options */}
           <div className="space-y-3">
-            <label className="block text-sm text-gray-400">Assignment Strategy</label>
+            <label className="form-label">Assignment Strategy</label>
             
             {/* Assign to all */}
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="radio"
                 checked={assignToAllSelected}
@@ -141,24 +141,24 @@ export function SmartTagAssignment({
                   setAssignToAllSelected(e.target.checked);
                   if (e.target.checked) setSelectedSubcategoryForTag('');
                 }}
-                className="text-indigo-600 focus:ring-indigo-500"
+                className="text-primary focus:ring-ring/60"
               />
-              <span className="text-sm text-gray-300">
+              <span className="text-sm text-foreground">
                 Assign to all selected subcategories ({selectedSubcategories.length + selectedSubcategoryNames.length})
               </span>
             </label>
 
             {/* Assign to specific */}
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="radio"
                 checked={!assignToAllSelected}
                 onChange={(e) => {
                   setAssignToAllSelected(!e.target.checked);
                 }}
-                className="text-indigo-600 focus:ring-indigo-500"
+                className="text-primary focus:ring-ring/60"
               />
-              <span className="text-sm text-gray-300">Assign to specific subcategory</span>
+              <span className="text-sm text-foreground">Assign to specific subcategory</span>
             </label>
 
             {/* Specific subcategory selection */}
@@ -167,7 +167,7 @@ export function SmartTagAssignment({
                 <select
                   value={selectedSubcategoryForTag}
                   onChange={(e) => setSelectedSubcategoryForTag(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-primary"
                 >
                   <option value="">Select subcategory...</option>
                   {selectedSubcategoriesData.map(subcategory => (
@@ -187,15 +187,15 @@ export function SmartTagAssignment({
 
           {/* Available Tags */}
           {availableTags.length > 0 && (
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Quick Select from Existing Tags</label>
+            <div className="form-group">
+              <label className="form-label">Quick Select from Existing Tags</label>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                 {availableTags.slice(0, 10).map(tag => (
                   <button
                     key={tag}
                     type="button"
                     onClick={() => setNewTagInput(tag)}
-                    className="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded border border-gray-500 hover:bg-gray-500 transition-colors"
+                    className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded border border-border hover:bg-secondary/70 transition-colors duration-150"
                   >
                     {tag}
                   </button>
@@ -205,7 +205,7 @@ export function SmartTagAssignment({
           )}
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={() => {
@@ -214,7 +214,7 @@ export function SmartTagAssignment({
                 setSelectedSubcategoryForTag('');
                 setAssignToAllSelected(false);
               }}
-              className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+              className="btn-secondary"
             >
               Cancel
             </button>
@@ -222,7 +222,7 @@ export function SmartTagAssignment({
               type="button"
               onClick={handleAddTag}
               disabled={!newTagInput.trim() || (!assignToAllSelected && !selectedSubcategoryForTag)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="btn-primary"
             >
               Add Tag
             </button>
@@ -232,7 +232,7 @@ export function SmartTagAssignment({
 
       {/* Current Assignments by Subcategory */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Current Tag Assignments
         </h4>
         
@@ -243,20 +243,19 @@ export function SmartTagAssignment({
             <div key={subcategory.id} className="space-y-2">
               {/* Subcategory Header */}
               <div 
-                className="flex items-center space-x-3 p-3 rounded-lg border-l-4"
+                className="flex items-center gap-3 p-3 rounded-lg border-l-4 bg-muted/40"
                 style={{ 
-                  backgroundColor: `${subcategory.category.color}15`,
                   borderLeftColor: subcategory.category.color 
                 }}
               >
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 shrink-0 rounded-full"
                   style={{ backgroundColor: subcategory.category.color }}
                 ></div>
-                <span className="text-sm font-medium text-gray-200">
+                <span className="text-sm font-medium text-foreground truncate">
                   {subcategory.category.name} → {subcategory.name}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground shrink-0">
                   ({tagsForSubcategory.length} tags)
                 </span>
               </div>
@@ -267,14 +266,15 @@ export function SmartTagAssignment({
                   {tagsForSubcategory.map(assignment => (
                     <div
                       key={`${assignment.subcategoryId}-${assignment.tag}`}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-600/20 text-indigo-300 rounded-lg text-sm border border-indigo-500/30"
+                      className="category-tag gap-2 pr-1"
                     >
                       <Tag className="w-3 h-3" />
                       <span>{assignment.tag}</span>
                       <button
                         type="button"
                         onClick={() => onTagAssignmentRemove(assignment.tag, assignment.subcategoryId)}
-                        className="text-indigo-400 hover:text-indigo-300 ml-1"
+                        aria-label={`Remove tag ${assignment.tag}`}
+                        className="p-1 rounded-full text-primary/70 hover:text-primary hover:bg-primary/20 transition-colors duration-150"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -282,7 +282,7 @@ export function SmartTagAssignment({
                   ))}
                 </div>
               ) : (
-                <div className="ml-6 text-sm text-gray-500 italic">
+                <div className="ml-6 text-sm text-muted-foreground italic">
                   No tags assigned yet
                 </div>
               )}
@@ -293,16 +293,16 @@ export function SmartTagAssignment({
 
       {/* Assignment Summary */}
       {tagAssignments.length > 0 && (
-        <div className="bg-green-900/20 border border-green-700/30 rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-3">
-            <AlertCircle className="w-4 h-4 text-green-400" />
-            <h4 className="text-sm font-medium text-green-300">Assignment Summary</h4>
+        <div className="bg-success/10 border border-success/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="w-4 h-4 text-success" />
+            <h4 className="text-sm font-medium text-success">Assignment Summary</h4>
           </div>
-          <div className="text-sm text-green-200">
+          <div className="text-sm text-foreground">
             <strong>{tagAssignments.length}</strong> tag assignments across{' '}
             <strong>{new Set(tagAssignments.map(a => a.subcategoryId)).size}</strong> subcategories
           </div>
-          <div className="mt-2 text-xs text-green-300">
+          <div className="mt-2 text-xs text-success">
             Tags will be properly associated with their respective subcategories when the item is saved.
           </div>
         </div>

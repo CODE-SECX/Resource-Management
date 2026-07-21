@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, type Tag, type Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Trash2, Edit2, Tag as TagIcon, Search, Hash } from 'lucide-react';
+import { Trash2, Edit2, Tag as TagIcon, Search, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export default function TagsPage() {
   const { user } = useAuth();
@@ -119,56 +121,79 @@ export default function TagsPage() {
     }
   };
 
-  return (
-    <div className="container-wide space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-50">Tags</h1>
-          <p className="text-gray-400">Manage reusable tags and their category associations</p>
+  if (loading) {
+    return (
+      <div className="container-wide space-y-8">
+        <div className="mb-8 space-y-2">
+          <Skeleton height={32} width={120} />
+          <Skeleton height={16} width={320} />
+        </div>
+        <Skeleton height={40} width={320} rounded="lg" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="card p-6 space-y-4">
+            <Skeleton height={20} width={140} />
+            <Skeleton height={40} />
+            <Skeleton height={40} width={100} />
+          </div>
+          <div className="card p-4 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} height={44} />
+            ))}
+          </div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="container-wide space-y-8">
+      <PageHeader
+        title="Tags"
+        subtitle="Manage reusable tags and their category associations"
+      />
 
       <div className="flex items-center gap-3 max-w-md">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search tags..."
-            className="pl-9 pr-3 py-2 w-full border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="input-primary pl-9"
           />
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <form onSubmit={submit} className="bg-gray-800 rounded-lg border border-gray-700 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-100">{editing ? 'Edit Tag' : 'Create Tag'}</h2>
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Name</label>
+        <form onSubmit={submit} className="card p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">{editing ? 'Edit Tag' : 'Create Tag'}</h2>
+          <div className="form-group">
+            <label className="form-label">Name</label>
             <div className="flex items-center gap-2">
-              <Hash className="w-4 h-4 text-gray-400" />
+              <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
                 required
                 value={form.name}
                 onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                className="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="input-primary flex-1"
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Color</label>
+          <div className="form-group">
+            <label className="form-label">Color</label>
             <input
               type="color"
               value={form.color}
               onChange={e => setForm(prev => ({ ...prev, color: e.target.value }))}
-              className="h-10 w-16 p-1 bg-gray-700 border border-gray-600 rounded"
+              aria-label="Tag color"
+              className="h-10 w-16 p-1 bg-card border border-input rounded-lg cursor-pointer"
             />
           </div>
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Link to Categories</label>
-            <div className="max-h-36 overflow-auto space-y-2 border border-gray-700 rounded p-3 bg-gray-900/30">
+          <div className="form-group">
+            <label className="form-label">Link to Categories</label>
+            <div className="max-h-36 overflow-auto space-y-2 border border-border rounded-lg p-3 bg-muted/30">
               {categories.map(cat => (
-                <label key={cat.id} className="flex items-center gap-2">
+                <label key={cat.id} className="flex items-center gap-2 py-1 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.categoryIds.includes(cat.id)}
@@ -180,46 +205,58 @@ export default function TagsPage() {
                           : prev.categoryIds.filter(id => id !== cat.id),
                       }));
                     }}
+                    className="rounded border-input text-primary focus:ring-ring/60"
                   />
-                  <span className="text-gray-200">{cat.name}</span>
+                  <span className="text-foreground">{cat.name}</span>
                 </label>
               ))}
+              {categories.length === 0 && (
+                <p className="text-sm text-muted-foreground">No categories yet</p>
+              )}
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="submit" className="btn-primary">
               {editing ? 'Update' : 'Create'}
             </button>
             {editing && (
-              <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">
+              <button type="button" onClick={resetForm} className="btn-secondary">
                 Cancel
               </button>
             )}
           </div>
         </form>
 
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <div className="space-y-2">
+        <div className="card p-4">
+          <div className="space-y-1">
             {filtered.map(tag => (
-              <div key={tag.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/40">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center px-2 py-1 text-xs rounded-full" style={{ backgroundColor: tag.color || '#475569', color: '#fff' }}>
-                    <TagIcon className="w-3 h-3 mr-1" />
-                    {tag.name}
+              <div key={tag.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors duration-150">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full truncate" style={{ backgroundColor: tag.color || 'hsl(var(--muted-foreground))', color: '#fff' }}>
+                    <TagIcon className="w-3 h-3 mr-1 shrink-0" />
+                    <span className="truncate">{tag.name}</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => startEdit(tag)} className="p-2 text-gray-400 hover:text-indigo-400">
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => startEdit(tag)}
+                    aria-label={`Edit tag ${tag.name}`}
+                    className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                  >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => remove(tag.id)} className="p-2 text-gray-400 hover:text-red-400">
+                  <button
+                    onClick={() => remove(tag.id)}
+                    aria-label={`Delete tag ${tag.name}`}
+                    className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             ))}
             {!filtered.length && (
-              <div className="text-center text-gray-400 py-8">No tags</div>
+              <div className="text-center text-muted-foreground py-8">No tags</div>
             )}
           </div>
         </div>

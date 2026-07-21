@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "^2.26.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.263.1",
+    "quill-better-table": "^1.2.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",

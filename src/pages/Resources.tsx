@@ -4,7 +4,7 @@ import {
   type Resource,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -19,6 +19,7 @@ export function Resources() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [copiedResourceId, setCopiedResourceId] = useState<string | null>(null);
 
 
 
@@ -76,6 +77,21 @@ export function Resources() {
     } catch (error) {
       console.error('Error deleting resource:', error);
       toast.error('Failed to delete resource');
+    }
+  };
+
+  const handleCopyResourceLink = async (id: string) => {
+    const resourceUrl = `${window.location.origin}/resources/${id}`;
+    try {
+      await navigator.clipboard.writeText(resourceUrl);
+      setCopiedResourceId(id);
+      toast.success('Resource link copied to clipboard!');
+      setTimeout(() => {
+        setCopiedResourceId(prev => (prev === id ? null : prev));
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying resource link:', error);
+      toast.error('Failed to copy link');
     }
   };
 
@@ -249,21 +265,35 @@ export function Resources() {
                 )}
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-3 border-t border-border">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {new Date(resource.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    Open
-                    <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyResourceLink(resource.id);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg px-2 py-1 transition-colors duration-150"
+                      title={copiedResourceId === resource.id ? 'Copied!' : 'Copy link'}
+                      aria-label="Copy resource link"
+                    >
+                      {copiedResourceId === resource.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedResourceId === resource.id ? 'Copied' : 'Copy'}
+                    </button>
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Open
+                      <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

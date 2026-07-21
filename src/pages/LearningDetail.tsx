@@ -13,6 +13,7 @@ export function LearningDetail() {
   const [loading, setLoading] = useState(true);
   const [shareLink, setShareLink] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
+  const [isPageLinkCopied, setIsPageLinkCopied] = useState(false);
 
   useEffect(() => {
     fetchLearning();
@@ -101,6 +102,20 @@ export function LearningDetail() {
     } catch (error) {
       console.error('Error copying to clipboard:', error);
       toast.error('Failed to copy link');
+    }
+  };
+
+  const copyPageLink = async () => {
+    const pageUrl = window.location.href;
+
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+      setIsPageLinkCopied(true);
+      toast.success('Page link copied to clipboard!');
+      setTimeout(() => setIsPageLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying page link:', error);
+      toast.error('Failed to copy page link');
     }
   };
 

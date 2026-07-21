@@ -13,6 +13,7 @@ export function ResourceDetail() {
   const [loading, setLoading] = useState(true);
   const [shareLink, setShareLink] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
+  const [isPageLinkCopied, setIsPageLinkCopied] = useState(false);
 
   useEffect(() => {
     fetchResource();
@@ -104,6 +105,20 @@ export function ResourceDetail() {
     }
   };
 
+  const copyPageLink = async () => {
+    const pageUrl = window.location.href;
+
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+      setIsPageLinkCopied(true);
+      toast.success('Page link copied to clipboard!');
+      setTimeout(() => setIsPageLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying page link:', error);
+      toast.error('Failed to copy page link');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -132,7 +147,7 @@ export function ResourceDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-reading mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header with back button */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
           <Link
@@ -152,6 +167,14 @@ export function ResourceDetail() {
               aria-label="Edit resource"
             >
               <Edit2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={copyPageLink}
+              className="p-2.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-accent transition-colors duration-150"
+              title={isPageLinkCopied ? 'Copied!' : 'Copy page link'}
+              aria-label="Copy page link"
+            >
+              {isPageLinkCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>
             <button
               onClick={handleShare}

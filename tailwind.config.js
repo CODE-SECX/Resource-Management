@@ -27,7 +27,7 @@ export default {
       maxWidth: {
         '8xl': '88rem',
         '9xl': '96rem',
-        'reading': '740px',
+        'reading': '760px',
       },
       fontSize: {
         'xxs': '0.625rem',

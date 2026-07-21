@@ -95,6 +95,10 @@
   transition: color 0.15s ease;
 }
 
+.rich-text-editor .ql-snow .ql-toolbar .ql-insertTable::before {
+  content: '\26E6';
+}
+
 .rich-text-editor .ql-snow .ql-toolbar button:hover,
 .rich-text-editor .ql-snow .ql-toolbar button:hover .ql-stroke {
   color: hsl(var(--foreground));
@@ -140,6 +144,39 @@
 .rich-text-editor .ql-editor a {
   color: hsl(var(--primary));
   text-decoration: underline;
+}
+
+.rich-text-editor .ql-editor table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 1.4rem 0;
+  min-width: 100%;
+}
+
+.rich-text-editor .ql-editor th,
+.rich-text-editor .ql-editor td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.85rem 1rem;
+  text-align: left;
+}
+
+.rich-text-editor .ql-editor th {
+  background-color: hsl(var(--muted) / 0.35);
+  font-weight: 700;
+}
+
+.rich-text-editor .ql-editor tr:nth-child(even) td {
+  background-color: hsl(var(--muted) / 0.08);
+}
+
+.rich-text-editor .ql-editor tr:hover td {
+  background-color: hsl(var(--accent) / 0.08);
+}
+
+.rich-text-editor .ql-editor table,
+.rich-text-editor .ql-editor pre {
+  overflow-x: auto;
 }
 
 /* Ensure content area has no unwanted scrollbars */

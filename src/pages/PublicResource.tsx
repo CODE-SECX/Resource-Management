@@ -66,7 +66,7 @@ export default function PublicResource() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-reading mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
           <div className="flex items-center gap-3">

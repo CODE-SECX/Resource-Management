@@ -12,7 +12,7 @@ import {
   setLearningTags,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, Link } from 'react-router-dom';
@@ -39,6 +39,7 @@ export function Learning() {
   const [dateRange, setDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [copiedLearningId, setCopiedLearningId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -357,6 +358,21 @@ export function Learning() {
     } catch (error) {
       console.error('Error deleting learning item:', error);
       toast.error('Failed to delete learning item');
+    }
+  };
+
+  const handleCopyLearningLink = async (id: string) => {
+    const itemUrl = `${window.location.origin}/learning/${id}`;
+    try {
+      await navigator.clipboard.writeText(itemUrl);
+      setCopiedLearningId(id);
+      toast.success('Learning link copied to clipboard!');
+      setTimeout(() => {
+        setCopiedLearningId(prev => (prev === id ? null : prev));
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying learning link:', error);
+      toast.error('Failed to copy link');
     }
   };
 
@@ -1098,21 +1114,35 @@ export function Learning() {
                 )}
 
                 {/* Footer: date + open link */}
-                <div className="flex items-center justify-between pt-3 border-t border-border">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    Open
-                    <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyLearningLink(item.id);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg px-2 py-1 transition-colors duration-150"
+                      title={copiedLearningId === item.id ? 'Copied!' : 'Copy link'}
+                      aria-label="Copy learning link"
+                    >
+                      {copiedLearningId === item.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedLearningId === item.id ? 'Copied' : 'Copy'}
+                    </button>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Open
+                      <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

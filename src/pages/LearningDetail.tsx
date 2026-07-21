@@ -142,7 +142,7 @@ export function LearningDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-reading mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         {/* Header with back button */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
           <Link
@@ -219,10 +219,9 @@ export function LearningDetail() {
         )}
 
         {/* Main Content */}
-        <article className="bg-card rounded-xl shadow-card border border-border">
+        <article>
           {/* Article Header */}
-          <header className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 border-b border-border">
-            <div className="max-w-reading mx-auto">
+          <header className="pt-2 sm:pt-4 pb-6 sm:pb-8 border-b border-border/50">
               <h1 className="font-sans text-3xl sm:text-4xl font-bold text-foreground mb-5 leading-tight tracking-tight">
                 {learning.title}
               </h1>
@@ -269,11 +268,10 @@ export function LearningDetail() {
                   ))}
                 </div>
               )}
-            </div>
           </header>
 
           {/* Article Content — Medium-style reading experience */}
-          <div className="px-6 sm:px-10 py-8 sm:py-12">
+          <div className="py-8 sm:py-12">
             <div
               className="article-content"
               dangerouslySetInnerHTML={{ __html: learning.description || '' }}
@@ -281,7 +279,7 @@ export function LearningDetail() {
 
             {/* Action Button */}
             {learning.url && (
-              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border">
+              <div className="mt-10 pt-8 border-t border-border/50">
                 <a
                   href={learning.url}
                   target="_blank"

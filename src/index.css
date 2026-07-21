@@ -440,7 +440,7 @@
    editor). Applied via `.article-content` wrapping the rendered HTML.
    ========================================================================== */
 .article-content {
-  --article-max-width: 700px;
+  --article-max-width: 740px;
   max-width: var(--article-max-width);
   margin-left: auto;
   margin-right: auto;

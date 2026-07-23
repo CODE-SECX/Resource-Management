@@ -155,21 +155,37 @@ export default function PublicResource() {
               dangerouslySetInnerHTML={{ __html: resource.description || '' }}
             />
 
-            {/* Action Button */}
+            {/* Action Buttons */}
             {(() => {
               const target = getContentTarget(resource);
               if (target.type === 'none') return null;
 
+              const hasHtml = Boolean(resource.html_content?.trim());
+              const hasUrl = Boolean(resource.url?.trim());
+
               return (
-                <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
-                  <button
-                    type="button"
-                    onClick={() => openContentTarget(resource)}
-                    className="btn-primary"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {target.type === 'html' ? 'Open HTML Content' : 'Visit Resource'}
-                  </button>
+                <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50 flex flex-wrap gap-3">
+                  {hasHtml && (
+                    <button
+                      type="button"
+                      onClick={() => openContentTarget(resource)}
+                      className="btn-primary"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open HTML Content
+                    </button>
+                  )}
+                  {hasUrl && (
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Visit Resource
+                    </a>
+                  )}
                 </div>
               );
             })()}

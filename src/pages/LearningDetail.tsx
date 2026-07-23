@@ -293,21 +293,37 @@ export function LearningDetail() {
               dangerouslySetInnerHTML={{ __html: learning.description || '' }}
             />
 
-            {/* Action Button */}
+            {/* Action Buttons */}
             {(() => {
               const target = getContentTarget(learning);
               if (target.type === 'none') return null;
 
+              const hasHtml = Boolean(learning.html_content?.trim());
+              const hasUrl = Boolean(learning.url?.trim());
+
               return (
-                <div className="mt-10 pt-8 border-t border-border/50">
-                  <button
-                    type="button"
-                    onClick={() => openContentTarget(learning)}
-                    className="btn-primary"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {target.type === 'html' ? 'Open HTML Content' : 'Open Learning Resource'}
-                  </button>
+                <div className="mt-10 pt-8 border-t border-border/50 flex flex-wrap gap-3">
+                  {hasHtml && (
+                    <button
+                      type="button"
+                      onClick={() => openContentTarget(learning)}
+                      className="btn-primary"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open HTML Content
+                    </button>
+                  )}
+                  {hasUrl && (
+                    <a
+                      href={learning.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open Learning Resource
+                    </a>
+                  )}
                 </div>
               );
             })()}

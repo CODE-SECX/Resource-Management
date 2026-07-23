@@ -5,6 +5,7 @@ import { supabase, type Resource, createShareToken } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, ExternalLink, Edit2, Trash2, Tag, Calendar, FileText, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getContentTarget, openContentTarget } from '../utils/openContent';
 
 export function ResourceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -292,19 +293,23 @@ export function ResourceDetail() {
             />
 
             {/* Action Button */}
-            {resource.url && (
-              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
-                <a
-                  href={resource.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Visit Resource
-                </a>
-              </div>
-            )}
+            {(() => {
+              const target = getContentTarget(resource);
+              if (target.type === 'none') return null;
+
+              return (
+                <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => openContentTarget(resource)}
+                    className="btn-primary"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {target.type === 'html' ? 'Open HTML Content' : 'Visit Resource'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </article>
       </div>

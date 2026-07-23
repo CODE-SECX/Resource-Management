@@ -35,6 +35,7 @@ export function LearningForm() {
     title: '',
     description: '',
     url: '',
+    html_content: '',
     tags: '',
     difficulty_level: 'Beginner' as Learning['difficulty_level'],
     categoryIds: [] as string[],
@@ -108,6 +109,7 @@ export function LearningForm() {
         title: item.title,
         description: item.description,
         url: item.url,
+        html_content: item.html_content || '',
         tags: '',
         difficulty_level: item.difficulty_level,
         categoryIds: item.categories?.map((cat: Category) => cat.id) || [],
@@ -230,6 +232,7 @@ export function LearningForm() {
         title: formData.title,
         description: formData.description,
         url: formData.url,
+        html_content: formData.html_content || null,
         tags: finalTags,
         subcategories: selectedFormSubcategories,
         difficulty_level: formData.difficulty_level,
@@ -447,6 +450,19 @@ export function LearningForm() {
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   className="input-primary"
                   placeholder="https://example.com"
+                />
+              </div>
+
+              {/* HTML Content - spans 2 columns */}
+              <div className="sm:col-span-2 form-group">
+                <label className="form-label">
+                  HTML Content
+                </label>
+                <textarea
+                  value={formData.html_content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  className="input-primary min-h-[140px] font-mono text-sm"
+                  placeholder="Paste raw HTML here. If present, this will be rendered instead of the URL when opening the item."
                 />
               </div>
 

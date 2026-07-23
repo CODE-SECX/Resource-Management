@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicResource } from '../lib/supabase';
 import { ExternalLink, Calendar, Tag, AlertCircle, FileText } from 'lucide-react';
+import { getContentTarget, openContentTarget } from '../utils/openContent';
 
 export default function PublicResource() {
   const { token } = useParams<{ token: string }>();
@@ -22,6 +23,9 @@ export default function PublicResource() {
         const data = await getPublicResource(token);
         if (data) {
           setResource(data);
+          if (!data.html_content && data.url) {
+            window.location.replace(data.url);
+          }
         } else {
           setError('Resource not found or link has expired');
         }
@@ -60,6 +64,19 @@ export default function PublicResource() {
             Go to Homepage
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (resource.html_content?.trim()) {
+    return (
+      <div className="min-h-screen bg-background">
+        <iframe
+          title="Shared HTML content"
+          srcDoc={resource.html_content}
+          className="w-full h-screen border-0"
+          sandbox="allow-same-origin allow-scripts"
+        />
       </div>
     );
   }
@@ -139,19 +156,23 @@ export default function PublicResource() {
             />
 
             {/* Action Button */}
-            {resource.url && (
-              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
-                <a
-                  href={resource.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Visit Resource
-                </a>
-              </div>
-            )}
+            {(() => {
+              const target = getContentTarget(resource);
+              if (target.type === 'none') return null;
+
+              return (
+                <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => openContentTarget(resource)}
+                    className="btn-primary"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {target.type === 'html' ? 'Open HTML Content' : 'Visit Resource'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </article>
       </div>

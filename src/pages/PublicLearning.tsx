@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicLearning } from '../lib/supabase';
 import { ExternalLink, Calendar, Tag, GraduationCap, AlertCircle } from 'lucide-react';
+import { getContentTarget, openContentTarget } from '../utils/openContent';
 
 export default function PublicLearning() {
   const { token } = useParams<{ token: string }>();
@@ -22,6 +23,9 @@ export default function PublicLearning() {
         const data = await getPublicLearning(token);
         if (data) {
           setLearning(data);
+          if (!data.html_content && data.url) {
+            window.location.replace(data.url);
+          }
         } else {
           setError('Learning resource not found or link has expired');
         }
@@ -75,6 +79,19 @@ export default function PublicLearning() {
             Go to Homepage
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (learning.html_content?.trim()) {
+    return (
+      <div className="min-h-screen bg-background">
+        <iframe
+          title="Shared HTML content"
+          srcDoc={learning.html_content}
+          className="w-full h-screen border-0"
+          sandbox="allow-same-origin allow-scripts"
+        />
       </div>
     );
   }
@@ -155,19 +172,23 @@ export default function PublicLearning() {
             />
 
             {/* Action Button */}
-            {learning.url && (
-              <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
-                <a
-                  href={learning.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open Learning Resource
-                </a>
-              </div>
-            )}
+            {(() => {
+              const target = getContentTarget(learning);
+              if (target.type === 'none') return null;
+
+              return (
+                <div className="max-w-reading mx-auto mt-10 pt-8 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => openContentTarget(learning)}
+                    className="btn-primary"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {target.type === 'html' ? 'Open HTML Content' : 'Open Learning Resource'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </article>
       </div>

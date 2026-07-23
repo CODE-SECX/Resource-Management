@@ -5,6 +5,7 @@ import { supabase, type Learning, createShareToken } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, ExternalLink, Edit2, Trash2, GraduationCap, Tag, Calendar, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getContentTarget, openContentTarget } from '../utils/openContent';
 
 export function LearningDetail() {
   const { id } = useParams<{ id: string }>();
@@ -293,19 +294,23 @@ export function LearningDetail() {
             />
 
             {/* Action Button */}
-            {learning.url && (
-              <div className="mt-10 pt-8 border-t border-border/50">
-                <a
-                  href={learning.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open Learning Resource
-                </a>
-              </div>
-            )}
+            {(() => {
+              const target = getContentTarget(learning);
+              if (target.type === 'none') return null;
+
+              return (
+                <div className="mt-10 pt-8 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => openContentTarget(learning)}
+                    className="btn-primary"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {target.type === 'html' ? 'Open HTML Content' : 'Open Learning Resource'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </article>
       </div>

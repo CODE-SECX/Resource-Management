@@ -56,6 +56,7 @@ export interface Resource {
   title: string;
   description: string;
   url: string;
+  html_content?: string | null;
   tags: string[];
   subcategories: string[];
   user_id: string;
@@ -70,6 +71,7 @@ export interface Learning {
   title: string;
   description: string;
   url: string;
+  html_content?: string | null;
   tags: string[];
   subcategories: string[];
   difficulty_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
@@ -96,6 +98,7 @@ export interface PublicLearning {
   title: string;
   description: string;
   url: string;
+  html_content?: string | null;
   tags: string[];
   subcategories: string[];
   difficulty_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
@@ -109,6 +112,7 @@ export interface PublicResource {
   title: string;
   description: string;
   url: string;
+  html_content?: string | null;
   tags: string[];
   subcategories: string[];
   created_at: string;

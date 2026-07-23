@@ -33,6 +33,7 @@ export function ResourceForm() {
     title: '',
     description: '',
     url: '',
+    html_content: '',
     tags: '',
     categoryIds: [] as string[],
   });
@@ -164,6 +165,7 @@ export function ResourceForm() {
         title: resource.title,
         description: resource.description,
         url: resource.url,
+        html_content: resource.html_content || '',
         tags: '',
         categoryIds: resource.categories?.map((cat: Category) => cat.id) || [],
       });
@@ -237,6 +239,7 @@ export function ResourceForm() {
         title: formData.title,
         description: formData.description,
         url: formData.url,
+        html_content: formData.html_content || null,
         tags: finalTags,
         subcategories: finalSubcategories,
         user_id: user.id,
@@ -446,6 +449,19 @@ export function ResourceForm() {
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   className="input-primary"
                   placeholder="https://example.com"
+                />
+              </div>
+
+              {/* HTML Content - spans 2 columns */}
+              <div className="sm:col-span-2 lg:col-span-4 form-group">
+                <label className="form-label">
+                  HTML Content
+                </label>
+                <textarea
+                  value={formData.html_content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  className="input-primary min-h-[140px] font-mono text-sm"
+                  placeholder="Paste raw HTML here. If present, this will be rendered instead of the URL when opening the item."
                 />
               </div>
 

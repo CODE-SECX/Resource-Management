@@ -1,16 +1,7 @@
 
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import 'quill-better-table/dist/quill-better-table.css';
 import './RichTextEditor.css';
-import QuillBetterTable from 'quill-better-table';
-
-Quill.register(
-  {
-    'modules/better-table': QuillBetterTable,
-  },
-  true
-);
 
 interface RichTextEditorProps {
   value: string;
@@ -36,38 +27,12 @@ export function RichTextEditor({
         [{ 'color': [] }, { 'background': [] }],
         [{ 'align': [] }],
         ['link', 'image'],
-        ['insertTable'],
         ['clean'],
       ],
-      handlers: {
-        insertTable: function (this: any) {
-          const tableModule = this.quill.getModule('better-table');
-          if (tableModule) {
-            tableModule.insertTable(3, 3);
-          }
-        },
-      },
-    },
-    'better-table': {
-      operationMenu: {
-        items: {
-          addRowAbove: { text: 'Add row above' },
-          addRowBelow: { text: 'Add row below' },
-          addColumnLeft: { text: 'Add column left' },
-          addColumnRight: { text: 'Add column right' },
-          deleteRow: { text: 'Delete row' },
-          deleteColumn: { text: 'Delete column' },
-          deleteTable: { text: 'Delete table' },
-        },
-      },
-    },
-    keyboard: {
-      bindings: QuillBetterTable.keyboardBindings,
     },
     clipboard: {
       matchVisual: false,
     },
-    table: false,
   };
 
   const formats = [
@@ -81,7 +46,6 @@ export function RichTextEditor({
     'color', 'background',
     'align',
     'link', 'image',
-    'table',
   ];
 
   return (

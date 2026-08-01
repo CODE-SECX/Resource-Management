@@ -284,6 +284,39 @@ export function LearningDetail() {
                   ))}
                 </div>
               )}
+
+              {/* Top action buttons */}
+              {(() => {
+                const hasHtml = Boolean(learning.html_content?.trim());
+                const hasUrl = Boolean(learning.url?.trim());
+                if (!hasHtml && !hasUrl) return null;
+
+                return (
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {hasHtml && (
+                      <button
+                        type="button"
+                        onClick={() => openContentTarget(learning)}
+                        className="btn-primary"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Open HTML Content
+                      </button>
+                    )}
+                    {hasUrl && (
+                      <a
+                        href={learning.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Open Learning Resource
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
           </header>
 
           {/* Article Content — Medium-style reading experience */}

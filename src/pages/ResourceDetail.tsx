@@ -282,6 +282,39 @@ export function ResourceDetail() {
                   ))}
                 </div>
               )}
+
+              {/* Top action buttons */}
+              {(() => {
+                const hasHtml = Boolean(resource.html_content?.trim());
+                const hasUrl = Boolean(resource.url?.trim());
+                if (!hasHtml && !hasUrl) return null;
+
+                return (
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {hasHtml && (
+                      <button
+                        type="button"
+                        onClick={() => openContentTarget(resource)}
+                        className="btn-primary"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Open HTML Content
+                      </button>
+                    )}
+                    {hasUrl && (
+                      <a
+                        href={resource.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Visit Resource
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </header>
 

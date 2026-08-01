@@ -3,6 +3,7 @@ import {
   supabase,
   type Resource,
 } from '../lib/supabase';
+import { openContentTarget } from '../utils/openContent';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -282,17 +283,33 @@ export function Resources() {
                       {copiedResourceId === resource.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       {copiedResourceId === resource.id ? 'Copied' : 'Copy'}
                     </button>
-                    <a
-                      href={resource.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      Open
-                      <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
-                    </a>
+                    {resource.html_content?.trim() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openContentTarget(resource);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 rounded-lg px-2 py-1"
+                        title="Open HTML Content"
+                        aria-label="Open HTML Content"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        HTML
+                      </button>
+                    )}
+                    {resource.url?.trim() && (
+                      <a
+                        href={resource.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors duration-150 group/link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Open
+                        <ArrowUpRight className="w-3 h-3 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform duration-150" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

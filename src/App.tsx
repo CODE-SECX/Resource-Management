@@ -19,6 +19,7 @@ import StickyNotes from './pages/StickyNotes';
 import Taxonomy from './pages/Taxonomy';
 import { LearningForm } from './pages/LearningForm';
 import { ResourceForm } from './pages/ResourceForm';
+import { Favourites } from './pages/Favourites';
 import { Toaster } from 'react-hot-toast';
 
 
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/payloads/create" element={<PayloadForm />} />
         <Route path="/payloads/:id/edit" element={<PayloadForm />} />
         <Route path="/sticky-notes" element={<StickyNotes />} />
+        <Route path="/favourites" element={<Favourites />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>

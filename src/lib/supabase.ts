@@ -59,6 +59,7 @@ export interface Resource {
   html_content?: string | null;
   tags: string[];
   subcategories: string[];
+  is_favorite: boolean;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -75,6 +76,7 @@ export interface Learning {
   tags: string[];
   subcategories: string[];
   difficulty_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+  is_favorite: boolean;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -1043,4 +1045,76 @@ export async function getStickyNotesStats(): Promise<StickyNoteStats> {
       orange: 0
     }
   };
+}
+
+// ----------------------------
+// Favourites helpers
+// ----------------------------
+
+/** Toggle the is_favorite flag on a learning item. Returns the updated record. */
+export async function toggleLearningFavourite(id: string, isFavorite: boolean): Promise<Learning> {
+  const { data, error } = await supabase
+    .from('learning')
+    .update({ is_favorite: isFavorite })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as Learning;
+}
+
+/** Toggle the is_favorite flag on a resource item. Returns the updated record. */
+export async function toggleResourceFavourite(id: string, isFavorite: boolean): Promise<Resource> {
+  const { data, error } = await supabase
+    .from('resources')
+    .update({ is_favorite: isFavorite })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as Resource;
+}
+
+/** Fetch all favourited learning items and resources for a user. */
+export async function getFavourites(userId: string): Promise<{ learning: Learning[]; resources: Resource[] }> {
+  const [learningResult, resourcesResult] = await Promise.all([
+    supabase
+      .from('learning')
+      .select(`
+        *,
+        learning_categories(
+          categories(*)
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_favorite', true)
+      .order('updated_at', { ascending: false }),
+    supabase
+      .from('resources')
+      .select(`
+        *,
+        resource_categories(
+          category_id,
+          categories(*)
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_favorite', true)
+      .order('updated_at', { ascending: false }),
+  ]);
+
+  if (learningResult.error) throw learningResult.error;
+  if (resourcesResult.error) throw resourcesResult.error;
+
+  const learning = (learningResult.data || []).map((item: any) => ({
+    ...item,
+    categories: item.learning_categories?.map((lc: any) => lc.categories) || [],
+  })) as Learning[];
+
+  const resources = (resourcesResult.data || []).map((item: any) => ({
+    ...item,
+    categories: item.resource_categories?.map((rc: any) => rc.categories) || [],
+  })) as Resource[];
+
+  return { learning, resources };
 }

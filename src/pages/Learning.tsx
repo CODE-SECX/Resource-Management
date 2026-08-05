@@ -10,10 +10,11 @@ import {
   upsertCategoryTagsByNames,
   setLearningSubcategories,
   setLearningTags,
+  toggleLearningFavourite,
 } from '../lib/supabase';
 import { openContentTarget } from '../utils/openContent';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, Link } from 'react-router-dom';
@@ -100,6 +101,24 @@ export function Learning() {
       toast.error('Failed to fetch learning items');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavourite = async (item: Learning) => {
+    const newValue = !item.is_favorite;
+    // Optimistic update
+    setLearning(prev =>
+      prev.map(l => l.id === item.id ? { ...l, is_favorite: newValue } : l)
+    );
+    try {
+      await toggleLearningFavourite(item.id, newValue);
+      toast.success(newValue ? '⭐ Added to Favourites' : 'Removed from Favourites');
+    } catch (error) {
+      // Revert on failure
+      setLearning(prev =>
+        prev.map(l => l.id === item.id ? { ...l, is_favorite: !newValue } : l)
+      );
+      toast.error('Failed to update favourite');
     }
   };
 
@@ -1028,7 +1047,24 @@ export function Learning() {
                     <GraduationCap className="w-3 h-3" />
                     {item.difficulty_level}
                   </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                  <div className="flex items-center gap-1">
+                    {/* Favourite star — always visible */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFavourite(item);
+                      }}
+                      className={`p-1.5 rounded-md transition-all duration-150 ${
+                        item.is_favorite
+                          ? 'text-amber-400 hover:text-amber-500 hover:bg-amber-400/10'
+                          : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-400/10 opacity-0 group-hover:opacity-100 focus-within:opacity-100'
+                      }`}
+                      title={item.is_favorite ? 'Remove from Favourites' : 'Add to Favourites'}
+                      aria-label={item.is_favorite ? 'Remove from Favourites' : 'Add to Favourites'}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${item.is_favorite ? 'fill-amber-400' : ''}`} />
+                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1051,6 +1087,7 @@ export function Learning() {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    </div>
                   </div>
                 </div>
 

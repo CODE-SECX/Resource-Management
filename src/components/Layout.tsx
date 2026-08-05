@@ -13,7 +13,8 @@ import {
   Search,
   Target,
   StickyNote,
-  Tag
+  Tag,
+  Star
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -59,6 +60,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Favourites', href: '/favourites', icon: Star },
     { name: 'Resources', href: '/resources', icon: BookOpen },
     { name: 'Resource Index', href: '/resources/index', icon: BookOpen },
     { name: 'Learning', href: '/learning', icon: GraduationCap },
@@ -178,13 +180,14 @@ export function Layout({ children }: LayoutProps) {
             <div className="hidden lg:flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
               {navigation.map((item) => {
                 const Icon = item.icon;
+                const isFavourites = item.href === '/favourites';
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`nav-link flex items-center gap-1.5 whitespace-nowrap ${isActive(item.href) ? 'active' : ''}`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className={`w-4 h-4 ${isFavourites ? 'text-amber-400' + (isActive(item.href) ? ' fill-amber-400' : '') : ''}`} />
                     {item.name}
                   </Link>
                 );
@@ -297,9 +300,10 @@ export function Layout({ children }: LayoutProps) {
 
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isFavourites = item.href === '/favourites';
               return (
                 <MobileNavLink key={item.name} to={item.href}>
-                  <Icon className="w-5 h-5" />
+                  <Icon className={`w-5 h-5 ${isFavourites ? 'text-amber-400' : ''}`} />
                   <span>{item.name}</span>
                 </MobileNavLink>
               );

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import {
   supabase,
   type Resource,
+  toggleResourceFavourite,
 } from '../lib/supabase';
 import { openContentTarget } from '../utils/openContent';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -93,6 +94,24 @@ export function Resources() {
     } catch (error) {
       console.error('Error copying resource link:', error);
       toast.error('Failed to copy link');
+    }
+  };
+
+  const handleToggleFavourite = async (resource: Resource) => {
+    const newValue = !resource.is_favorite;
+    // Optimistic update
+    setResources(prev =>
+      prev.map(r => r.id === resource.id ? { ...r, is_favorite: newValue } : r)
+    );
+    try {
+      await toggleResourceFavourite(resource.id, newValue);
+      toast.success(newValue ? '⭐ Added to Favourites' : 'Removed from Favourites');
+    } catch (error) {
+      // Revert on failure
+      setResources(prev =>
+        prev.map(r => r.id === resource.id ? { ...r, is_favorite: !newValue } : r)
+      );
+      toast.error('Failed to update favourite');
     }
   };
 
@@ -185,7 +204,24 @@ export function Resources() {
                 {/* Actions (visible on hover) */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1" />
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                  <div className="flex items-center gap-1">
+                    {/* Favourite star — always visible when active */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFavourite(resource);
+                      }}
+                      className={`p-1.5 rounded-md transition-all duration-150 ${
+                        resource.is_favorite
+                          ? 'text-amber-400 hover:text-amber-500 hover:bg-amber-400/10'
+                          : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-400/10 opacity-0 group-hover:opacity-100 focus-within:opacity-100'
+                      }`}
+                      title={resource.is_favorite ? 'Remove from Favourites' : 'Add to Favourites'}
+                      aria-label={resource.is_favorite ? 'Remove from Favourites' : 'Add to Favourites'}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${resource.is_favorite ? 'fill-amber-400' : ''}`} />
+                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => { e.stopPropagation(); window.open(`/resources/${resource.id}/edit`, '_blank'); }}
                       className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors duration-150"
@@ -202,6 +238,7 @@ export function Resources() {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    </div>
                   </div>
                 </div>
 

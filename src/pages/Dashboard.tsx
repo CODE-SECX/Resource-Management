@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, GraduationCap, Tag, Clock, ArrowRight, Activity } from 'lucide-react';
+import { BookOpen, GraduationCap, Tag, ArrowRight, Activity, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Skeleton } from '../components/ui/Skeleton';
 
@@ -11,6 +11,7 @@ interface Stats {
   totalLearning: number;
   totalCategories: number;
   recentItems: number;
+  totalFavourites: number;
 }
 
 interface RecentResource {
@@ -33,6 +34,7 @@ export default function Dashboard() {
     totalLearning: 0,
     totalCategories: 0,
     recentItems: 0,
+    totalFavourites: 0,
   });
   const [recentResources, setRecentResources] = useState<RecentResource[]>([]);
   const [recentLearning, setRecentLearning] = useState<RecentLearning[]>([]);
@@ -50,10 +52,12 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      const [resourcesResult, learningResult, categoriesResult] = await Promise.all([
+      const [resourcesResult, learningResult, categoriesResult, favLearningResult, favResourcesResult] = await Promise.all([
         supabase.from('resources').select('id', { count: 'exact' }).eq('user_id', user.id),
         supabase.from('learning').select('id', { count: 'exact' }).eq('user_id', user.id),
         supabase.from('categories').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('learning').select('id', { count: 'exact' }).eq('user_id', user.id).eq('is_favorite', true),
+        supabase.from('resources').select('id', { count: 'exact' }).eq('user_id', user.id).eq('is_favorite', true),
       ]);
 
       const { data: recentResourcesData } = await supabase
@@ -73,12 +77,14 @@ export default function Dashboard() {
       const totalResources = resourcesResult.count || 0;
       const totalLearning = learningResult.count || 0;
       const totalCategories = categoriesResult.count || 0;
+      const totalFavourites = (favLearningResult.count || 0) + (favResourcesResult.count || 0);
 
       setStats({
         totalResources,
         totalLearning,
         totalCategories,
         recentItems: totalResources + totalLearning,
+        totalFavourites,
       });
 
       setRecentResources(recentResourcesData || []);
@@ -173,10 +179,10 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { title: 'Total Resources', value: stats.totalResources, icon: BookOpen, link: '/resources' },
-            { title: 'Learning Items', value: stats.totalLearning, icon: GraduationCap, link: '/learning' },
-            { title: 'Categories', value: stats.totalCategories, icon: Tag, link: '/categories' },
-            { title: 'Recent Items', value: stats.recentItems, icon: Clock },
+            { title: 'Total Resources', value: stats.totalResources, icon: BookOpen, link: '/resources', iconClass: '' },
+            { title: 'Learning Items', value: stats.totalLearning, icon: GraduationCap, link: '/learning', iconClass: '' },
+            { title: 'Categories', value: stats.totalCategories, icon: Tag, link: '/categories', iconClass: '' },
+            { title: 'Favourites', value: stats.totalFavourites, icon: Star, link: '/favourites', iconClass: 'text-amber-400' },
           ].map((stat, idx) => (
             <div
               key={idx}
@@ -198,8 +204,8 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="flex-shrink-0 p-3 rounded-xl bg-primary/10 group-hover:bg-primary/15 transition-colors duration-200">
-                  <stat.icon className="h-6 w-6 text-primary" />
+                <div className={`flex-shrink-0 p-3 rounded-xl transition-colors duration-200 ${stat.iconClass ? 'bg-amber-400/10 group-hover:bg-amber-400/15' : 'bg-primary/10 group-hover:bg-primary/15'}`}>
+                  <stat.icon className={`h-6 w-6 ${stat.iconClass || 'text-primary'} ${stat.iconClass === 'text-amber-400' ? 'fill-amber-400/30' : ''}`} />
                 </div>
               </div>
             </div>

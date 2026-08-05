@@ -29,7 +29,10 @@ import {
   Layers, 
   Hash,
   TrendingUp,
-  Activity
+  Activity,
+  Network,
+  GitBranch,
+  ArrowLeftRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TreeView, type TreeNode } from '../components/TreeView';
@@ -37,15 +40,20 @@ import { TaxonomyModal, type TaxonomyModalData } from '../components/TaxonomyMod
 import { BulkTagModal } from '../components/BulkTagModal';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
+import TaxonomyDashboard from './TaxonomyDashboard';
+import SearchMoveTab from './SearchMoveTab';
 
 const predefinedColors = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4',
   '#84CC16', '#F97316', '#EC4899', '#6366F1', '#14B8A6', '#F43F5E',
 ];
 
+type TaxonomyTab = 'tree' | 'dashboard' | 'bulk-move';
+
 export default function Taxonomy() {
   const { user } = useAuth();
 
+  const [activeTab, setActiveTab] = useState<TaxonomyTab>('tree');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -672,6 +680,12 @@ export default function Taxonomy() {
     );
   }
 
+  const tabs: { id: TaxonomyTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'tree', label: 'Tree View', icon: GitBranch },
+    { id: 'dashboard', label: 'Visual Dashboard', icon: Network },
+    { id: 'bulk-move', label: 'Bulk Move', icon: ArrowLeftRight },
+  ];
+
   return (
     <div className="container-wide space-y-8">
       <PageHeader
@@ -692,6 +706,34 @@ export default function Taxonomy() {
           </button>
         }
       />
+
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 bg-muted/40 rounded-xl p-1 border border-border w-fit">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            id={`taxonomy-tab-${id}`}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+              ${activeTab === id
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Visual Dashboard tab */}
+      {activeTab === 'dashboard' && <TaxonomyDashboard />}
+
+      {/* Bulk Move tab */}
+      {activeTab === 'bulk-move' && <SearchMoveTab />}
+
+      {activeTab === 'tree' && (
+        <>
 
       {/* Statistics Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -895,6 +937,8 @@ export default function Taxonomy() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Category Form Modal */}
       {showCategoryForm && (

@@ -5,6 +5,7 @@ import {
   type Category,
   getSubcategories,
   getTagsByCategories,
+  getTagsForSubcategories,
   upsertSubcategoriesByNames,
   upsertTagsByNames,
   upsertCategoryTagsByNames,
@@ -173,31 +174,65 @@ export function Learning() {
     }
   };
 
-  // Load suggested tags and subcategories when category selection changes
+  // Load suggested tags and subcategories when category or subcategory selection changes.
+  // NOTE: selectedFormSubcategories in this legacy inline form stores subcategory *names*
+  // (free-text input), so we resolve names → IDs from the getSubcategories results.
   useEffect(() => {
     const loadSuggestions = async () => {
       if (!user) return;
+
+      console.log('[TagSuggestions/Learning] Effect fired — categoryIds:', formData.categoryIds, '| selectedFormSubcategories (names):', selectedFormSubcategories);
+
       if (formData.categoryIds.length > 0) {
         try {
-          const tagResults = await getTagsByCategories(user.id, formData.categoryIds);
-          setSuggestedTags(tagResults.map((t) => t.name));
-
+          // Fetch subcategories for selected categories (needed for both name→id lookup and filteredSubcategories)
           const subcatResults = await Promise.all(
             formData.categoryIds.map(catId => getSubcategories(user.id!, catId))
           );
-          const allSubcats = Array.from(new Set(subcatResults.flat().map((s: any) => s.name)));
-          setFilteredSubcategories(allSubcats);
+          const allSubcats = subcatResults.flat();
+          const allSubcatNames = Array.from(new Set(allSubcats.map((s: any) => s.name)));
+          setFilteredSubcategories(allSubcatNames);
+
+          // 1. Category-level tags (subcategory_id IS NULL)
+          console.log('[TagSuggestions/Learning] Fetching category-level tags for categoryIds:', formData.categoryIds);
+          const catTags = await getTagsByCategories(user.id, formData.categoryIds);
+          console.log('[TagSuggestions/Learning] Category-level tags returned:', catTags.map(t => t.name));
+
+          // 2. Subcategory-level tags — resolve names → IDs using the fetched subcats
+          let subcatTagNames: string[] = [];
+          if (selectedFormSubcategories.length > 0) {
+            const selectedSubcatIds = allSubcats
+              .filter((s: any) => selectedFormSubcategories.includes(s.name))
+              .map((s: any) => s.id);
+            console.log('[TagSuggestions/Learning] Resolved subcategory IDs from names:', selectedSubcatIds);
+            if (selectedSubcatIds.length > 0) {
+              const subcatTags = await getTagsForSubcategories(user.id, selectedSubcatIds);
+              subcatTagNames = subcatTags.map(t => t.name);
+              console.log('[TagSuggestions/Learning] Subcategory-level tags returned:', subcatTagNames);
+            }
+          } else {
+            console.log('[TagSuggestions/Learning] No subcategories selected, skipping subcategory tag fetch');
+          }
+
+          // 3. Merge & deduplicate
+          const merged = Array.from(
+            new Set([...catTags.map(t => t.name), ...subcatTagNames])
+          ).sort();
+          console.log('[TagSuggestions/Learning] Final merged suggestedTags:', merged);
+          setSuggestedTags(merged);
         } catch (e) {
+          console.error('[TagSuggestions/Learning] Error fetching tag suggestions:', e);
           setSuggestedTags(allFormTags);
           setFilteredSubcategories(Array.from(new Set(learning.flatMap(item => item.subcategories || []))));
         }
       } else {
+        console.log('[TagSuggestions/Learning] No categories selected, using allFormTags');
         setSuggestedTags(allFormTags);
         setFilteredSubcategories(Array.from(new Set(learning.flatMap(item => item.subcategories || []))));
       }
     };
     loadSuggestions();
-  }, [formData.categoryIds, user]);
+  }, [formData.categoryIds, selectedFormSubcategories, user]);
 
   const handleTagInputChange = (value: string) => {
     setTagInputValue(value);

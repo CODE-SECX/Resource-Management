@@ -629,6 +629,21 @@ export async function getTagsByCategory(userId: string, categoryId: string): Pro
   return (data || []) as Tag[];
 }
 
+// Fetch category-level tags for multiple categories in a single round-trip
+// Use this when the caller has a string[] of category IDs (multi-select use case).
+export async function getTagsByCategories(userId: string, categoryIds: string[]): Promise<Tag[]> {
+  if (!categoryIds || categoryIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('tags')
+    .select('*')
+    .eq('user_id', userId)
+    .in('category_id', categoryIds)
+    .is('subcategory_id', null)
+    .order('name');
+  if (error) throw error;
+  return (data || []) as Tag[];
+}
+
 // Fetch tags for multiple subcategories in a single round-trip
 export async function getTagsForSubcategories(userId: string, subcategoryIds: string[]): Promise<Tag[]> {
   if (!subcategoryIds || subcategoryIds.length === 0) return [];

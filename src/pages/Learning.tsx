@@ -4,7 +4,7 @@ import {
   type Learning,
   type Category,
   getSubcategories,
-  getTagsByCategory,
+  getTagsByCategories,
   upsertSubcategoriesByNames,
   upsertTagsByNames,
   upsertCategoryTagsByNames,
@@ -179,8 +179,8 @@ export function Learning() {
       if (!user) return;
       if (formData.categoryIds.length > 0) {
         try {
-          const tagResults = await getTagsByCategory(user.id, formData.categoryIds);
-          setSuggestedTags(tagResults.map((t: any) => t.name));
+          const tagResults = await getTagsByCategories(user.id, formData.categoryIds);
+          setSuggestedTags(tagResults.map((t) => t.name));
 
           const subcatResults = await Promise.all(
             formData.categoryIds.map(catId => getSubcategories(user.id!, catId))

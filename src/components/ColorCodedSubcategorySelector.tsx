@@ -136,7 +136,7 @@ export function ColorCodedSubcategorySelector({
           <div className="flex flex-wrap gap-2">
             {selectedSubcategories.map(subId => {
               const subcategory = availableSubcategories.find(sub => sub.id === subId);
-              if (!subcategory) return null;
+              if (!subcategory || !subcategory.category) return null;
               
               return (
                 <div
@@ -145,7 +145,7 @@ export function ColorCodedSubcategorySelector({
                 >
                   <div
                     className="w-2 h-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: subcategory.category.color }}
+                    style={{ backgroundColor: subcategory.category.color || '#6366f1' }}
                   ></div>
                   <span className="text-foreground">
                     {subcategory.category.name} → {subcategory.name}

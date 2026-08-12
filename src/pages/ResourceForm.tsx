@@ -2,21 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   supabase,
   type Category,
+  type Tag,
   getSubcategories,
   getTagsByCategories,
   getTagsForSubcategories,
-  upsertSubcategoriesByNames,
-  upsertTagsByNames,
-  upsertCategoryTagsByNames,
+  getTags,
   setResourceSubcategories,
   setResourceTags,
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Tag, X, ArrowLeft, Save, FileText, Folder, Target, Lightbulb } from 'lucide-react';
+import { Tag as TagIcon, X, ArrowLeft, Save, FileText, Folder, Lightbulb, Search, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
-import { SmartTagAssignment } from '../components/SmartTagAssignment';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Skeleton } from '../components/ui/Skeleton';
 
@@ -46,30 +44,12 @@ export function ResourceForm() {
   const tagInputRef = useRef<HTMLInputElement>(null);
   const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]);
   const [availableSubcategoriesWithCategory, setAvailableSubcategoriesWithCategory] = useState<any[]>([]);
-  const [tagAssignments, setTagAssignments] = useState<{
-    tag: string;
-    subcategoryId: string;
-    subcategoryName: string;
-    categoryName: string;
-    categoryColor: string;
-  }[]>([]);
+
+  // Taxonomy-scoped tag suggestions (names for display, full objects for ID lookup on save)
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-
-  const allTags = Array.from(new Set(
-    (() => {
-      try {
-        return [] as string[];
-      } catch {
-        return [];
-      }
-    })()
-  ));
-
-  const getFilteredTags = () => {
-    if (formData.categoryIds.length === 0) return allTags;
-    return allTags;
-  };
-  const filteredTags = getFilteredTags();
+  const [suggestedTagObjects, setSuggestedTagObjects] = useState<Tag[]>([]);
+  // All tags in the user's taxonomy (restricts free-typing to existing tags only)
+  const [allUserTagObjects, setAllUserTagObjects] = useState<Tag[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -77,22 +57,21 @@ export function ResourceForm() {
       if (isEditing && id) {
         fetchResourceItem(id);
       }
+      fetchAllUserTags();
     }
   }, [user, id, isEditing]);
 
-  useEffect(() => {
-    fetchAllTags();
-  }, [user]);
-
-  const fetchAllTags = async () => {
+  // Fetch the complete set of existing taxonomy tags for this user.
+  // Used for: (1) the search pool so the picker never creates new tags,
+  // (2) ID resolution on save.
+  const fetchAllUserTags = async () => {
     if (!user) return;
     try {
-      await supabase
-        .from('resources')
-        .select('tags')
-        .eq('user_id', user.id);
+      const tags = await getTags(user.id);
+      setAllUserTagObjects(tags);
+      console.log('[ResourceForm] All user taxonomy tags loaded:', tags.map(t => t.name));
     } catch (error) {
-      console.error('Error fetching tags:', error);
+      console.error('[ResourceForm] Error fetching all user tags:', error);
     }
   };
 
@@ -128,7 +107,7 @@ export function ResourceForm() {
 
   // ── Tag suggestion loading ──────────────────────────────────────────────
   // Runs whenever selected categories OR subcategories change.
-  // selectedFormSubcategories holds subcategory UUIDs (ColorCodedSubcategorySelector).
+  // Stores full Tag objects (for ID resolution on save) and names (for display).
   useEffect(() => {
     const loadTagSuggestions = async () => {
       if (!user) return;
@@ -136,8 +115,9 @@ export function ResourceForm() {
       console.log('[TagSuggestions/ResourceForm] Effect fired — categoryIds:', formData.categoryIds, '| selectedFormSubcategories (IDs):', selectedFormSubcategories);
 
       if (formData.categoryIds.length === 0) {
-        console.log('[TagSuggestions/ResourceForm] No categories selected, clearing suggestions');
+        console.log('[TagSuggestions/ResourceForm] No categories selected, clearing scoped suggestions');
         setSuggestedTags([]);
+        setSuggestedTagObjects([]);
         return;
       }
 
@@ -148,46 +128,81 @@ export function ResourceForm() {
         console.log('[TagSuggestions/ResourceForm] Category-level tags returned:', catTags.map(t => t.name));
 
         // 2. Subcategory-level tags — selectedFormSubcategories holds UUIDs
-        let subcatTagNames: string[] = [];
+        let subcatTags: Tag[] = [];
         if (selectedFormSubcategories.length > 0) {
           console.log('[TagSuggestions/ResourceForm] Fetching subcategory-level tags for subcategoryIds:', selectedFormSubcategories);
-          const subcatTags = await getTagsForSubcategories(user.id, selectedFormSubcategories);
-          subcatTagNames = subcatTags.map(t => t.name);
-          console.log('[TagSuggestions/ResourceForm] Subcategory-level tags returned:', subcatTagNames);
+          subcatTags = await getTagsForSubcategories(user.id, selectedFormSubcategories);
+          console.log('[TagSuggestions/ResourceForm] Subcategory-level tags returned:', subcatTags.map(t => t.name));
         } else {
           console.log('[TagSuggestions/ResourceForm] No subcategories selected, skipping subcategory tag fetch');
         }
 
-        // 3. Merge & deduplicate by name
-        const merged = Array.from(
-          new Set([...catTags.map(t => t.name), ...subcatTagNames])
-        ).sort();
-        console.log('[TagSuggestions/ResourceForm] Final merged suggestedTags:', merged);
-        setSuggestedTags(merged);
+        // 3. Merge & deduplicate by id, sort by name
+        const seenIds = new Set<string>();
+        const merged: Tag[] = [];
+        for (const tag of [...catTags, ...subcatTags]) {
+          if (!seenIds.has(tag.id)) {
+            seenIds.add(tag.id);
+            merged.push(tag);
+          }
+        }
+        merged.sort((a, b) => a.name.localeCompare(b.name));
+
+        console.log('[TagSuggestions/ResourceForm] Final merged suggestedTags:', merged.map(t => t.name));
+        setSuggestedTagObjects(merged);
+        setSuggestedTags(merged.map(t => t.name));
       } catch (e) {
         console.error('[TagSuggestions/ResourceForm] Error fetching tag suggestions:', e);
-        // Graceful degradation: keep existing suggestions
       }
     };
 
     loadTagSuggestions();
   }, [user, formData.categoryIds, selectedFormSubcategories]);
 
+  // All known tag names: scoped suggestions + full user taxonomy (for search pool)
+  const allKnownTagNames = Array.from(
+    new Set([...suggestedTags, ...allUserTagObjects.map(t => t.name)])
+  ).sort();
+
   const handleTagInputChange = (value: string) => {
     setTagInputValue(value);
     if (value.trim()) {
-      const allAvailableTags = Array.from(new Set([...suggestedTags, ...selectedFormTags]));
-      const suggestions = allAvailableTags
-        .filter(tag =>
-          tag.toLowerCase().includes(value.toLowerCase()) &&
-          !selectedFormTags.includes(tag)
-        )
+      const filtered = allKnownTagNames
+        .filter(name => name.toLowerCase().includes(value.toLowerCase()) && !selectedFormTags.includes(name))
         .slice(0, 8);
-      setFilteredTagSuggestions(suggestions);
-      setShowTagSuggestions(suggestions.length > 0);
+      setFilteredTagSuggestions(filtered);
+      setShowTagSuggestions(filtered.length > 0);
     } else {
+      setFilteredTagSuggestions([]);
       setShowTagSuggestions(false);
     }
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const typed = tagInputValue.trim();
+      if (!typed) return;
+      const exactMatch = allKnownTagNames.find(name => name.toLowerCase() === typed.toLowerCase());
+      if (exactMatch && !selectedFormTags.includes(exactMatch)) {
+        setSelectedFormTags(prev => [...prev, exactMatch]);
+        setTagInputValue('');
+        setFilteredTagSuggestions([]);
+        setShowTagSuggestions(false);
+      }
+      // No exact match → do nothing (hint shown in UI)
+    } else if (e.key === 'Escape') {
+      setShowTagSuggestions(false);
+    }
+  };
+
+  const addTagFromSuggestion = (tag: string) => {
+    if (!selectedFormTags.includes(tag)) {
+      setSelectedFormTags(prev => [...prev, tag]);
+    }
+    setTagInputValue('');
+    setFilteredTagSuggestions([]);
+    setShowTagSuggestions(false);
   };
 
   const fetchResourceItem = async (resourceId: string) => {
@@ -228,7 +243,6 @@ export function ResourceForm() {
         return found ? found.id : null;
       }).filter((id: string | null) => id !== null) as string[];
       setSelectedFormSubcategories(subcategoryIds);
-      setTagAssignments([]);
       setTagInputValue('');
     } catch (error) {
       console.error('Error fetching resource item:', error);
@@ -260,22 +274,19 @@ export function ResourceForm() {
     );
   };
 
-  const handleTagAssignmentAdd = (assignment: {
-    tag: string;
-    subcategoryId: string;
-    subcategoryName: string;
-    categoryName: string;
-    categoryColor: string;
-  }) => {
-    setTagAssignments(prev => {
-      const exists = prev.some(a => a.tag === assignment.tag && a.subcategoryId === assignment.subcategoryId);
-      if (exists) return prev;
-      return [...prev, assignment];
-    });
-  };
-
-  const handleTagAssignmentRemove = (tag: string, subcategoryId: string) => {
-    setTagAssignments(prev => prev.filter(a => !(a.tag === tag && a.subcategoryId === subcategoryId)));
+  // Resolve tag names → existing tag IDs without creating new tags.
+  const resolveTagIds = (tagNames: string[]): string[] => {
+    const pool = [...suggestedTagObjects, ...allUserTagObjects];
+    const seenIds = new Set<string>();
+    const ids: string[] = [];
+    for (const name of tagNames) {
+      const found = pool.find(t => t.name.toLowerCase() === name.toLowerCase());
+      if (found && !seenIds.has(found.id)) {
+        seenIds.add(found.id);
+        ids.push(found.id);
+      }
+    }
+    return ids;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -285,14 +296,13 @@ export function ResourceForm() {
     setLoading(true);
     try {
       const finalTags = selectedFormTags;
-      const finalSubcategories = selectedFormSubcategories;
       const resourceData = {
         title: formData.title,
         description: formData.description,
         url: formData.url,
         html_content: formData.html_content || null,
         tags: finalTags,
-        subcategories: finalSubcategories,
+        subcategories: selectedFormSubcategories,
         user_id: user.id,
       };
 
@@ -328,66 +338,27 @@ export function ResourceForm() {
         await supabase.from('resource_categories').insert(categoryConnections);
       }
 
-      let allUpsertedSubcats: { id: string; name: string }[] = [];
-
+      // Handle subcategories — stored as UUIDs
       if (selectedFormSubcategories.length > 0) {
         const existingSubcats = selectedFormSubcategories.map(id => {
           const subcategory = availableSubcategoriesWithCategory.find(sub => sub.id === id);
           return subcategory ? { id: subcategory.id, name: subcategory.name } : null;
         }).filter(Boolean) as { id: string; name: string }[];
-        allUpsertedSubcats.push(...existingSubcats);
-      }
 
-      if (allUpsertedSubcats.length > 0) {
-        const uniqueSubcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-        const validSubcategoryIds = uniqueSubcatIds.filter(id => {
+        if (existingSubcats.length > 0) {
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          return uuidRegex.test(id);
-        });
-        if (validSubcategoryIds.length > 0) {
-          await setResourceSubcategories(resourceId, validSubcategoryIds);
+          const validSubcategoryIds = Array.from(new Set(existingSubcats.map(s => s.id)))
+            .filter(id => uuidRegex.test(id));
+          if (validSubcategoryIds.length > 0) {
+            await setResourceSubcategories(resourceId, validSubcategoryIds);
+          }
         }
       }
 
-      if (tagAssignments.length > 0) {
-        const tagIds: string[] = [];
-        const assignmentsBySubcategory = tagAssignments.reduce((acc, assignment) => {
-          if (!acc[assignment.subcategoryId]) acc[assignment.subcategoryId] = [];
-          acc[assignment.subcategoryId].push(assignment.tag);
-          return acc;
-        }, {} as Record<string, string[]>);
-
-        for (const [subcategoryId, tags] of Object.entries(assignmentsBySubcategory)) {
-          const tagResults = await upsertTagsByNames(user.id!, subcategoryId, tags);
-          tagIds.push(...tagResults.map(t => t.id));
-        }
-        if (tagIds.length > 0) {
-          await setResourceTags(resourceId, Array.from(new Set(tagIds)));
-        }
-      } else if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
-        let tagIds: string[] = [];
-        if (selectedFormSubcategories.length > 0) {
-          let subcatIds: string[] = [];
-          if (allUpsertedSubcats.length > 0) {
-            subcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-          } else {
-            const subcatResults = await Promise.all(
-              formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
-            );
-            subcatIds = Array.from(new Set(subcatResults.flat().map(s => s.id)));
-          }
-          if (subcatIds.length > 0) {
-            const tagResults = await Promise.all(
-              subcatIds.map((subcatId) => upsertTagsByNames(user.id!, subcatId, selectedFormTags))
-            );
-            tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
-          }
-        } else {
-          const tagResults = await Promise.all(
-            formData.categoryIds.map((catId) => upsertCategoryTagsByNames(user.id!, catId, selectedFormTags))
-          );
-          tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
-        }
+      // Link tags by resolving their existing IDs — no upsert / no new tag creation
+      if (finalTags.length > 0) {
+        const tagIds = resolveTagIds(finalTags);
+        console.log('[ResourceForm] Resolved tag IDs for save:', tagIds, '(from names:', finalTags, ')');
         if (tagIds.length > 0) {
           await setResourceTags(resourceId, tagIds);
         }
@@ -415,6 +386,11 @@ export function ResourceForm() {
       </div>
     );
   }
+
+  const typedNoMatch =
+    tagInputValue.trim().length > 0 &&
+    filteredTagSuggestions.length === 0 &&
+    !allKnownTagNames.some(n => n.toLowerCase() === tagInputValue.trim().toLowerCase());
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -503,7 +479,7 @@ export function ResourceForm() {
                 />
               </div>
 
-              {/* HTML Content - spans 2 columns */}
+              {/* HTML Content - spans full width */}
               <div className="sm:col-span-2 lg:col-span-4 form-group">
                 <label className="form-label">
                   HTML Content
@@ -550,110 +526,115 @@ export function ResourceForm() {
                 </div>
               )}
 
-                  {/* Subcategories - spans 2 columns */}
-                  {formData.categoryIds.length > 0 && (
-                    <div className="sm:col-span-2 form-group">
-                      <label className="form-label flex items-center gap-2">
-                        <Folder className="w-4 h-4 text-primary" />
-                        Subcategories
-                      </label>
-                      <div className="bg-muted/40 border border-border rounded-lg p-4">
-                        <ColorCodedSubcategorySelector
-                          availableSubcategories={availableSubcategoriesWithCategory}
-                          selectedSubcategories={selectedFormSubcategories}
-                          onSubcategoryToggle={handleSubcategoryToggle}
-                          selectedCategories={formData.categoryIds}
-                          allCategories={allCategories}
-                        />
-                      </div>
+              {/* Subcategories - spans 2 columns */}
+              {formData.categoryIds.length > 0 && (
+                <div className="sm:col-span-2 form-group">
+                  <label className="form-label flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-primary" />
+                    Subcategories
+                  </label>
+                  <div className="bg-muted/40 border border-border rounded-lg p-4">
+                    <ColorCodedSubcategorySelector
+                      availableSubcategories={availableSubcategoriesWithCategory}
+                      selectedSubcategories={selectedFormSubcategories}
+                      onSubcategoryToggle={handleSubcategoryToggle}
+                      selectedCategories={formData.categoryIds}
+                      allCategories={allCategories}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tags - spans full width */}
+              <div className="sm:col-span-2 lg:col-span-4 form-group">
+                <label className="form-label flex items-center gap-2">
+                  <TagIcon className="w-4 h-4 text-primary" />
+                  Tags
+                </label>
+
+                {/* Selected tag chips */}
+                {selectedFormTags.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {selectedFormTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setSelectedFormTags(prev => prev.filter(t => t !== tag))}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors duration-150"
+                      >
+                        {tag}
+                        <X className="ml-1.5 w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Search input */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={tagInputValue}
+                    onChange={(e) => handleTagInputChange(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    className="input-primary pl-9"
+                    placeholder="Search existing tags…"
+                  />
+                  {showTagSuggestions && filteredTagSuggestions.length > 0 && (
+                    <div className="absolute z-20 w-full mt-2 bg-popover border border-border rounded-lg shadow-dropdown max-h-48 overflow-y-auto">
+                      {filteredTagSuggestions.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTagFromSuggestion(tag)}
+                          className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-accent transition-colors duration-150 flex items-center gap-2"
+                        >
+                          <TagIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+                          {tag}
+                        </button>
+                      ))}
                     </div>
                   )}
+                </div>
 
-                  {/* Tags - spans 2 columns */}
-                  <div className="sm:col-span-2 lg:col-span-4 form-group">
-                    <label className="form-label flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-primary" />
-                      Tags
-                    </label>
-                    {selectedFormTags.length > 0 && (
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {selectedFormTags.map((tag) => (
+                {/* "Tag not found" hint */}
+                {typedNoMatch && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    <Info className="w-3.5 h-3.5 shrink-0" />
+                    Tag not found — create it from the <strong>Taxonomy</strong> screen first.
+                  </p>
+                )}
+
+                {/* Relevant tags for selected categories/subcategories */}
+                {suggestedTags.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Relevant tags for selected {selectedFormSubcategories.length > 0 ? 'categories & subcategories' : 'categories'}:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestedTags
+                        .filter(t => !selectedFormTags.includes(t))
+                        .map(tag => (
                           <button
                             key={tag}
                             type="button"
-                            onClick={() => setSelectedFormTags(prev => prev.filter(t => t !== tag))}
-                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors duration-150"
+                            onClick={() => addTagFromSuggestion(tag)}
+                            className="px-2.5 py-1 text-xs rounded-full border border-border bg-secondary/60 text-secondary-foreground hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors duration-150"
                           >
                             {tag}
-                            <X className="ml-1.5 w-3 h-3" />
                           </button>
                         ))}
-                      </div>
-                    )}
-                    <div className="relative">
-                      <input
-                        ref={tagInputRef}
-                        type="text"
-                        value={tagInputValue}
-                        onChange={(e) => handleTagInputChange(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ',') {
-                            e.preventDefault();
-                            const newTag = tagInputValue.trim();
-                            if (newTag && !selectedFormTags.includes(newTag)) {
-                              setSelectedFormTags(prev => [...prev, newTag]);
-                            }
-                            setTagInputValue('');
-                            setShowTagSuggestions(false);
-                          } else if (e.key === 'Escape') {
-                            setShowTagSuggestions(false);
-                          }
-                        }}
-                        className="input-primary"
-                        placeholder="Type tags (press Enter to add)"
-                      />
-                      {showTagSuggestions && (
-                        <div className="absolute z-20 w-full mt-2 bg-popover border border-border rounded-lg shadow-dropdown max-h-40 overflow-y-auto">
-                          {filteredTagSuggestions.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => {
-                                if (!selectedFormTags.includes(tag)) setSelectedFormTags(prev => [...prev, tag]);
-                                setTagInputValue('');
-                                setShowTagSuggestions(false);
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-accent transition-colors duration-150 flex items-center"
-                            >
-                              <Tag className="w-3 h-3 mr-2 text-muted-foreground" />
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                    <p className="form-hint">Press Enter or comma to add a tag.</p>
                   </div>
+                )}
 
-                  {/* Smart Tag Assignment */}
-                  {selectedFormSubcategories.length > 0 && (
-                    <div className="sm:col-span-2 lg:col-span-4 form-group">
-                      <label className="form-label flex items-center gap-2">
-                        <Target className="w-4 h-4 text-primary" />
-                        Tag Assignment
-                      </label>
-                      <div className="bg-muted/40 border border-border rounded-lg p-4">
-                        <SmartTagAssignment
-                          selectedSubcategories={selectedFormSubcategories}
-                          availableSubcategories={availableSubcategoriesWithCategory}
-                          tagAssignments={tagAssignments}
-                          onTagAssignmentAdd={handleTagAssignmentAdd}
-                          onTagAssignmentRemove={handleTagAssignmentRemove}
-                          availableTags={Array.from(new Set([...selectedFormTags, ...suggestedTags]))}
-                        />
-                      </div>
-                    </div>
-                  )}
+                <p className="form-hint mt-2">
+                  Search and select from existing taxonomy tags. To create new tags, use the <strong>Taxonomy</strong> screen.
+                </p>
+              </div>
 
             </div>
           </div>

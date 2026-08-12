@@ -94,10 +94,12 @@ export function ResourceForm() {
       try {
         const subLists = await Promise.all(formData.categoryIds.map(id => getSubcategories(user.id, id)));
         const allSubcats = subLists.flat();
-        const subcategoriesWithCategory = allSubcats.map(sub => ({
-          ...sub,
-          category: allCategories.find(cat => cat.id === sub.category_id)!
-        }));
+        const subcategoriesWithCategory = allSubcats
+          .map(sub => {
+            const cat = allCategories.find(c => c.id === sub.category_id);
+            return cat ? { ...sub, category: cat } : null;
+          })
+          .filter((s): s is any => s !== null);
         setAvailableSubcategoriesWithCategory(subcategoriesWithCategory);
       } catch (error) {
         console.error('Error fetching enhanced subcategories:', error);

@@ -3,6 +3,8 @@ import {
   supabase,
   type Category,
   getSubcategories,
+  getTagsByCategories,
+  getTagsForSubcategories,
   upsertSubcategoriesByNames,
   upsertTagsByNames,
   upsertCategoryTagsByNames,
@@ -51,6 +53,7 @@ export function ResourceForm() {
     categoryName: string;
     categoryColor: string;
   }[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
   const allTags = Array.from(new Set(
     (() => {
@@ -123,15 +126,63 @@ export function ResourceForm() {
     })();
   }, [user, formData.categoryIds, allCategories]);
 
+  // ── Tag suggestion loading ──────────────────────────────────────────────
+  // Runs whenever selected categories OR subcategories change.
+  // selectedFormSubcategories holds subcategory UUIDs (ColorCodedSubcategorySelector).
+  useEffect(() => {
+    const loadTagSuggestions = async () => {
+      if (!user) return;
+
+      console.log('[TagSuggestions/ResourceForm] Effect fired — categoryIds:', formData.categoryIds, '| selectedFormSubcategories (IDs):', selectedFormSubcategories);
+
+      if (formData.categoryIds.length === 0) {
+        console.log('[TagSuggestions/ResourceForm] No categories selected, clearing suggestions');
+        setSuggestedTags([]);
+        return;
+      }
+
+      try {
+        // 1. Category-level tags (subcategory_id IS NULL)
+        console.log('[TagSuggestions/ResourceForm] Fetching category-level tags for categoryIds:', formData.categoryIds);
+        const catTags = await getTagsByCategories(user.id, formData.categoryIds);
+        console.log('[TagSuggestions/ResourceForm] Category-level tags returned:', catTags.map(t => t.name));
+
+        // 2. Subcategory-level tags — selectedFormSubcategories holds UUIDs
+        let subcatTagNames: string[] = [];
+        if (selectedFormSubcategories.length > 0) {
+          console.log('[TagSuggestions/ResourceForm] Fetching subcategory-level tags for subcategoryIds:', selectedFormSubcategories);
+          const subcatTags = await getTagsForSubcategories(user.id, selectedFormSubcategories);
+          subcatTagNames = subcatTags.map(t => t.name);
+          console.log('[TagSuggestions/ResourceForm] Subcategory-level tags returned:', subcatTagNames);
+        } else {
+          console.log('[TagSuggestions/ResourceForm] No subcategories selected, skipping subcategory tag fetch');
+        }
+
+        // 3. Merge & deduplicate by name
+        const merged = Array.from(
+          new Set([...catTags.map(t => t.name), ...subcatTagNames])
+        ).sort();
+        console.log('[TagSuggestions/ResourceForm] Final merged suggestedTags:', merged);
+        setSuggestedTags(merged);
+      } catch (e) {
+        console.error('[TagSuggestions/ResourceForm] Error fetching tag suggestions:', e);
+        // Graceful degradation: keep existing suggestions
+      }
+    };
+
+    loadTagSuggestions();
+  }, [user, formData.categoryIds, selectedFormSubcategories]);
+
   const handleTagInputChange = (value: string) => {
     setTagInputValue(value);
     if (value.trim()) {
-      const suggestions = filteredTags
+      const allAvailableTags = Array.from(new Set([...suggestedTags, ...selectedFormTags]));
+      const suggestions = allAvailableTags
         .filter(tag =>
           tag.toLowerCase().includes(value.toLowerCase()) &&
           !selectedFormTags.includes(tag)
         )
-        .slice(0, 5);
+        .slice(0, 8);
       setFilteredTagSuggestions(suggestions);
       setShowTagSuggestions(suggestions.length > 0);
     } else {
@@ -598,7 +649,7 @@ export function ResourceForm() {
                           tagAssignments={tagAssignments}
                           onTagAssignmentAdd={handleTagAssignmentAdd}
                           onTagAssignmentRemove={handleTagAssignmentRemove}
-                          availableTags={selectedFormTags}
+                          availableTags={Array.from(new Set([...selectedFormTags, ...suggestedTags]))}
                         />
                       </div>
                     </div>

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { supabase, type Resource, type Subcategory, getSubcategories } from '../lib/supabase';
+import { supabase, type Resource, type Category, type Subcategory, getSubcategories } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, ExternalLink, X, Filter, Calendar, Tag as TagIcon, List, Grid } from 'lucide-react';
-import { TaxonomyManager } from '../components/TaxonomyManager';
+import { FilterPanel, ActiveFilterBar, type FilterChip } from '../components/FilterPanel';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
 
@@ -19,6 +19,9 @@ export function ResourceIndex() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'index'>('card');
   const [allSubcategories, setAllSubcategories] = useState<Subcategory[]>([]);
+  // Panel data used to resolve category/subcategory names in the chip bar
+  const [panelCats, setPanelCats] = useState<Category[]>([]);
+  const [panelSubsMap, setPanelSubsMap] = useState<Map<string, Subcategory[]>>(new Map());
 
   useEffect(() => {
     fetchResources();
@@ -141,51 +144,112 @@ export function ResourceIndex() {
 
   const activeFilterCount = selectedCategories.length + selectedSubcategories.length + selectedTags.length;
 
+  // Chip definitions for the active filter bar
+  const filterChips: FilterChip[] = useMemo(() => [
+    ...selectedCategories.map(catId => {
+      const cat = panelCats.find(c => c.id === catId);
+      return {
+        id: `cat-${catId}`,
+        label: cat?.name ?? catId,
+        color: cat?.color,
+        variant: 'category' as const,
+        onRemove: () => handleCategoryToggle(catId),
+      };
+    }),
+    ...selectedSubcategories.map(subId => {
+      let name = subId;
+      panelSubsMap.forEach(subcats => {
+        const sub = subcats.find(s => s.id === subId);
+        if (sub) name = sub.name;
+      });
+      return {
+        id: `sub-${subId}`,
+        label: name,
+        variant: 'subcategory' as const,
+        onRemove: () => handleSubcategoryToggle(subId),
+      };
+    }),
+    ...selectedTags.map(tag => ({
+      id: `tag-${tag}`,
+      label: tag,
+      variant: 'tag' as const,
+      onRemove: () => handleTagToggle(tag),
+    })),
+  ], [selectedCategories, selectedSubcategories, selectedTags, panelCats, panelSubsMap]);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Filter Button */}
+
+      {/* ── Mobile: backdrop ─────────────────────────────────────────── */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile: Filter FAB ───────────────────────────────────────── */}
       <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-6 right-4 z-40 p-3 rounded-xl bg-card shadow-modal border border-border hover:bg-accent transition-colors duration-150"
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed bottom-6 right-4 z-30 flex items-center gap-2 px-4 py-3 rounded-2xl bg-card shadow-modal border border-border hover:bg-accent transition-all duration-200"
         aria-label="Open filters"
       >
-        <div className="flex items-center space-x-2">
-          <Filter className="w-5 h-5 text-muted-foreground" />
-          {activeFilterCount > 0 && (
-            <span className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-              {activeFilterCount}
-            </span>
-          )}
-        </div>
+        <Filter className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm font-medium text-foreground">Filters</span>
+        {activeFilterCount > 0 && (
+          <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold leading-none">
+            {activeFilterCount}
+          </span>
+        )}
       </button>
 
       <div className="flex">
-        {/* Sidebar */}
-        <div className={`${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-96 max-w-[85vw] h-screen lg:h-[calc(100vh-2rem)] bg-card/95 backdrop-blur-sm border-r border-border transform transition-transform duration-300 ease-in-out overflow-y-auto shadow-modal lg:shadow-none lg:mr-8`}>
-          
-          {/* Sidebar Header */}
-          <div className="p-6 border-b border-border bg-muted/40 mt-10 lg:mt-0">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Filter className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <h2 className="text-xl font-bold text-foreground">Filters</h2>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent text-secondary-foreground hover:text-accent-foreground transition-all duration-200 border border-border"
-                aria-label="Close filters"
-              >
-                <X className="w-5 h-5" strokeWidth={2.5} />
-              </button>
-            </div>
+        {/* ── Filter panel — sticky sidebar on desktop, bottom sheet on mobile ── */}
+        <div
+          className={[
+            // ── Mobile base: fixed bottom sheet ──────────────────────────────
+            'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] rounded-t-2xl border-t border-border bg-card',
+            'flex flex-col',
+            'transform transition-transform duration-300 ease-in-out',
+            isMobileMenuOpen ? 'translate-y-0' : 'translate-y-full',
+            // ── Desktop overrides: sticky sidebar in normal flow ──────────────
+            'lg:relative lg:inset-auto lg:max-h-none lg:rounded-none lg:border-t-0 lg:border-r',
+            'lg:transform-none lg:translate-y-0',
+            'lg:sticky lg:top-0 lg:h-screen lg:z-10',
+            'lg:w-72 xl:lg:w-80 lg:shrink-0',
+          ].join(' ')}
+        >
+          {/* Drag handle — mobile only */}
+          <div className="lg:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-border" />
           </div>
 
-          <div className="p-6">
-            <TaxonomyManager
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                <Filter className="w-3.5 h-3.5 text-primary-foreground" />
+              </div>
+              <h2 className="font-bold text-foreground">Filters</h2>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary/15 text-primary text-xs font-semibold leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </div>
+            {/* Close button — mobile only */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+              aria-label="Close filters"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scrollable filter content */}
+          <div className="flex-1 overflow-y-auto p-5 min-h-0">
+            <FilterPanel
               type="resources"
               selectedCategories={selectedCategories}
               selectedSubcategories={selectedSubcategories}
@@ -194,7 +258,21 @@ export function ResourceIndex() {
               onSubcategoryToggle={handleSubcategoryToggle}
               onTagToggle={handleTagToggle}
               onClearAll={clearAllFilters}
+              onDataLoaded={(cats, map) => {
+                setPanelCats(cats);
+                setPanelSubsMap(map);
+              }}
             />
+          </div>
+
+          {/* Apply button — mobile only */}
+          <div className="lg:hidden p-4 border-t border-border flex-shrink-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors duration-150"
+            >
+              Apply Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </button>
           </div>
         </div>
 
@@ -228,7 +306,7 @@ export function ResourceIndex() {
             />
 
             {/* Search Bar */}
-            <div className="mb-8">
+            <div className="mb-4">
               <div className="relative max-w-4xl">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <input
@@ -241,9 +319,16 @@ export function ResourceIndex() {
               </div>
             </div>
 
+            {/* Active filter chips */}
+            {filterChips.length > 0 && (
+              <div className="mb-4">
+                <ActiveFilterBar chips={filterChips} onClearAll={clearAllFilters} />
+              </div>
+            )}
+
             {/* Results Counter */}
             <div className="mb-6 flex items-center justify-between">
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {filteredResources.length} resource{filteredResources.length !== 1 ? 's' : ''} found
               </p>
             </div>
@@ -431,14 +516,6 @@ export function ResourceIndex() {
           </div>
         </div>
       </div>
-
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
 
     </div>
   );

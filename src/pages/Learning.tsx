@@ -3,6 +3,7 @@ import {
   supabase,
   type Learning,
   type Category,
+  type Subcategory,
   getSubcategories,
   getTagsByCategories,
   getTagsForSubcategories,
@@ -15,13 +16,14 @@ import {
 } from '../lib/supabase';
 import { openContentTarget } from '../utils/openContent';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check, Star } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check, Star, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, Link } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/Skeleton';
+import { FilterPanel, ActiveFilterBar, type FilterChip } from '../components/FilterPanel';
 
 const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
 
@@ -44,6 +46,9 @@ export function Learning() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [copiedLearningId, setCopiedLearningId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Taxonomy data received from FilterPanel — used for chip label resolution
+  const [panelCats, setPanelCats] = useState<Category[]>([]);
+  const [panelSubsMap, setPanelSubsMap] = useState<Map<string, Subcategory[]>>(new Map());
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -458,6 +463,64 @@ export function Learning() {
       .map(sc => [sc.id, sc])
   ).values());
 
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedSubcategoryFilters([]);
+    setSelectedTags([]);
+    setSelectedDifficulty([]);
+    setDateRange({ start: '', end: '' });
+  };
+
+  const filterChips: FilterChip[] = [
+    ...selectedCategories.map(catId => {
+      const cat = panelCats.find(c => c.id === catId);
+      return {
+        id: `cat-${catId}`,
+        label: cat?.name ?? catId,
+        color: cat?.color,
+        variant: 'category' as const,
+        onRemove: () => setSelectedCategories(prev => prev.filter(id => id !== catId)),
+      };
+    }),
+    ...selectedSubcategoryFilters.map(subId => {
+      let name = subId;
+      panelSubsMap.forEach(subcats => {
+        const sub = subcats.find(s => s.id === subId);
+        if (sub) name = sub.name;
+      });
+      return {
+        id: `sub-${subId}`,
+        label: name,
+        variant: 'subcategory' as const,
+        onRemove: () => setSelectedSubcategoryFilters(prev => prev.filter(s => s !== subId)),
+      };
+    }),
+    ...selectedTags.map(tag => ({
+      id: `tag-${tag}`,
+      label: tag,
+      variant: 'tag' as const,
+      onRemove: () => setSelectedTags(prev => prev.filter(t => t !== tag)),
+    })),
+    ...selectedDifficulty.map(d => ({
+      id: `diff-${d}`,
+      label: d,
+      variant: 'other' as const,
+      onRemove: () => setSelectedDifficulty(prev => prev.filter(x => x !== d)),
+    })),
+    ...(dateRange.start ? [{
+      id: 'date-from',
+      label: `From: ${dateRange.start}`,
+      variant: 'other' as const,
+      onRemove: () => setDateRange(prev => ({ ...prev, start: '' })),
+    }] : []),
+    ...(dateRange.end ? [{
+      id: 'date-to',
+      label: `To: ${dateRange.end}`,
+      variant: 'other' as const,
+      onRemove: () => setDateRange(prev => ({ ...prev, end: '' })),
+    }] : []),
+  ];
+
   const filteredLearning = learning.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -546,6 +609,7 @@ export function Learning() {
 
       {/* Filters */}
       <div>
+        {/* Search bar + toggle button */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -559,7 +623,7 @@ export function Learning() {
           </div>
           <button
             onClick={() => setFiltersOpen(prev => !prev)}
-            className={`inline-flex items-center justify-center px-3 py-2.5 rounded-lg border transition-colors duration-150 text-sm font-medium ${
+            className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-colors duration-150 text-sm font-medium ${
               filtersOpen
                 ? 'bg-primary/10 border-primary/30 text-primary'
                 : 'bg-card border-border text-foreground hover:bg-accent'
@@ -567,192 +631,169 @@ export function Learning() {
             aria-expanded={filtersOpen}
             title="Toggle filters"
           >
-            <Filter className="w-4 h-4 mr-2" />
+            <Filter className="w-4 h-4" />
             Filters
+            {filterChips.length > 0 && (
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-xs font-semibold leading-none">
+                {filterChips.length}
+              </span>
+            )}
           </button>
         </div>
 
-        {filtersOpen && (
-          <div className="bg-card rounded-xl p-4 mb-6 space-y-3 border border-border shadow-card">
-            {/* Difficulty */}
-            <details className="bg-muted/40 rounded-md" open>
-              <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Difficulty</summary>
-              <div className="px-3 py-2">
-                <div className="flex flex-wrap gap-2">
-                  {difficultyLevels.map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => {
-                        setSelectedDifficulty(prev =>
-                          prev.includes(level)
-                            ? prev.filter(d => d !== level)
-                            : [...prev, level]
-                        );
-                      }}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
-                        selectedDifficulty.includes(level)
-                          ? getDifficultyColor(level)
-                          : 'text-muted-foreground border-border hover:bg-accent'
-                      }`}
-                    >
-                      {level}
-                      {selectedDifficulty.includes(level) && (
-                        <X className="ml-1 w-3 h-3" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </details>
-
-            {/* Date Range */}
-            <details className="bg-muted/40 rounded-md">
-              <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Date Range</summary>
-              <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1">From</label>
-                  <input
-                    type="date"
-                    value={dateRange.start}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                    className="input-primary text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1">To</label>
-                  <input
-                    type="date"
-                    value={dateRange.end}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                    className="input-primary text-sm"
-                  />
-                </div>
-                {(dateRange.start || dateRange.end) && (
-                  <div className="md:col-span-2">
-                    <button
-                      onClick={() => setDateRange({ start: '', end: '' })}
-                      className="mt-2 p-2 text-muted-foreground hover:text-destructive transition-colors duration-150"
-                      title="Clear date filter"
-                    >
-                      Clear date filter
-                    </button>
-                  </div>
-                )}
-              </div>
-            </details>
-
-            {/* Categories */}
-            {categories.length > 0 && (
-              <details className="bg-muted/40 rounded-md">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Categories</summary>
-                <div className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => {
-                          setSelectedCategories(prev =>
-                            prev.includes(category.id)
-                              ? prev.filter(id => id !== category.id)
-                              : [...prev, category.id]
-                          );
-                        }}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                          selectedCategories.includes(category.id)
-                            ? 'text-white'
-                            : 'text-muted-foreground border border-border hover:bg-accent'
-                        }`}
-                        style={{
-                          backgroundColor: selectedCategories.includes(category.id) ? category.color : undefined,
-                        }}
-                      >
-                        {category.name}
-                        {selectedCategories.includes(category.id) && (
-                          <X className="ml-1 w-3 h-3" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            )}
-
-            {/* Tags */}
-            {allTags.length > 0 && (
-              <details className="bg-muted/40 rounded-md">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Tags</summary>
-                <div className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                    {allTags.map((tag) => (
-                      <button
-                        key={tag}
-                        onClick={() => {
-                          setSelectedTags(prev =>
-                            prev.includes(tag)
-                              ? prev.filter(t => t !== tag)
-                              : [...prev, tag]
-                          );
-                        }}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                          selectedTags.includes(tag)
-                            ? 'bg-primary text-primary-foreground border border-primary'
-                            : 'text-muted-foreground border border-border hover:bg-accent'
-                        }`}
-                      >
-                        <Tag className="mr-1 w-3 h-3" />
-                        {tag}
-                        {selectedTags.includes(tag) && (
-                          <X className="ml-1 w-3 h-3" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            )}
-
-            {/* Subcategories */}
-            {allSubcategories.length > 0 && (
-              <details className="bg-muted/40 rounded-md">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-foreground">Subcategories</summary>
-                <div className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                    {allSubcategories.map((sc) => (
-                      <button
-                        key={sc.id}
-                        onClick={() => {
-                          setSelectedSubcategoryFilters(prev =>
-                            prev.includes(sc.id)
-                              ? prev.filter(s => s !== sc.id)
-                              : [...prev, sc.id]
-                          );
-                        }}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                          selectedSubcategoryFilters.includes(sc.id)
-                            ? 'bg-accent text-accent-foreground border border-primary/30'
-                            : 'text-muted-foreground border border-border hover:bg-accent'
-                        }`}
-                      >
-                        {sc.name}
-                        {selectedSubcategoryFilters.includes(sc.id) && (
-                          <X className="ml-1 w-3 h-3" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            )}
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setFiltersOpen(false)}
-                className="btn-secondary"
-              >
-                Close Filters
-              </button>
-            </div>
+        {/* Active filter chip bar */}
+        {filterChips.length > 0 && (
+          <div className="mb-4">
+            <ActiveFilterBar chips={filterChips} onClearAll={clearAllFilters} />
           </div>
+        )}
+
+        {/* Filter panel — inline on desktop, bottom sheet on mobile */}
+        {filtersOpen && (
+          <>
+            {/* Mobile backdrop */}
+            <div
+              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+              onClick={() => setFiltersOpen(false)}
+            />
+
+            {/* Panel container */}
+            <div className={
+              [
+                // Mobile: fixed bottom sheet
+                'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] rounded-t-2xl border-t border-border bg-card',
+                'flex flex-col',
+                // Desktop: inline panel card
+                'lg:relative lg:inset-auto lg:z-auto lg:max-h-none lg:rounded-xl lg:border lg:mb-6',
+              ].join(' ')
+            }>
+              {/* Drag handle — mobile only */}
+              <div className="lg:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-10 h-1 rounded-full bg-border" />
+              </div>
+
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+                <h2 className="text-sm font-semibold text-foreground">Filter Learning Resources</h2>
+                <button
+                  onClick={() => setFiltersOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+                  aria-label="Close filters"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable filter content */}
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                <FilterPanel
+                  type="learning"
+                  selectedCategories={selectedCategories}
+                  selectedSubcategories={selectedSubcategoryFilters}
+                  selectedTags={selectedTags}
+                  onCategoryToggle={(id) => setSelectedCategories(prev =>
+                    prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+                  )}
+                  onSubcategoryToggle={(id) => setSelectedSubcategoryFilters(prev =>
+                    prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+                  )}
+                  onTagToggle={(tag) => setSelectedTags(prev =>
+                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                  )}
+                  onClearAll={clearAllFilters}
+                  onDataLoaded={(cats, map) => {
+                    setPanelCats(cats);
+                    setPanelSubsMap(map);
+                  }}
+                  extraSections={
+                    <>
+                      {/* Difficulty */}
+                      <details className="group" open>
+                        <summary className="flex items-center gap-2 cursor-pointer list-none select-none rounded-lg px-1 py-1.5 hover:bg-accent/50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1">Difficulty</span>
+                          {selectedDifficulty.length > 0 && (
+                            <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-primary/15 text-primary text-xs font-semibold leading-none">
+                              {selectedDifficulty.length}
+                            </span>
+                          )}
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 group-open:rotate-0 -rotate-90" />
+                        </summary>
+                        <div className="mt-2 px-1 flex flex-wrap gap-2">
+                          {difficultyLevels.map(level => (
+                            <button
+                              key={level}
+                              onClick={() => setSelectedDifficulty(prev =>
+                                prev.includes(level) ? prev.filter(d => d !== level) : [...prev, level]
+                              )}
+                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                                selectedDifficulty.includes(level)
+                                  ? getDifficultyColor(level)
+                                  : 'text-muted-foreground border-border hover:bg-accent'
+                              }`}
+                            >
+                              {level}
+                              {selectedDifficulty.includes(level) && <X className="w-2.5 h-2.5 ml-0.5" />}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+
+                      {/* Date Range */}
+                      <details className="group">
+                        <summary className="flex items-center gap-2 cursor-pointer list-none select-none rounded-lg px-1 py-1.5 hover:bg-accent/50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1">Date Range</span>
+                          {(dateRange.start || dateRange.end) && (
+                            <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-primary/15 text-primary text-xs font-semibold leading-none">
+                              {(dateRange.start ? 1 : 0) + (dateRange.end ? 1 : 0)}
+                            </span>
+                          )}
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 group-open:rotate-0 -rotate-90" />
+                        </summary>
+                        <div className="mt-2 px-1 space-y-2">
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">From</label>
+                            <input
+                              type="date"
+                              value={dateRange.start}
+                              onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                              className="input-primary text-sm w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">To</label>
+                            <input
+                              type="date"
+                              value={dateRange.end}
+                              onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                              className="input-primary text-sm w-full"
+                            />
+                          </div>
+                          {(dateRange.start || dateRange.end) && (
+                            <button
+                              onClick={() => setDateRange({ start: '', end: '' })}
+                              className="text-xs text-left text-muted-foreground hover:text-destructive transition-colors duration-150"
+                            >
+                              Clear dates
+                            </button>
+                          )}
+                        </div>
+                      </details>
+                    </>
+                  }
+                />
+              </div>
+
+              {/* Apply button — mobile only */}
+              <div className="lg:hidden p-4 border-t border-border flex-shrink-0">
+                <button
+                  onClick={() => setFiltersOpen(false)}
+                  className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors duration-150"
+                >
+                  Apply Filters{filterChips.length > 0 ? ` (${filterChips.length})` : ''}
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

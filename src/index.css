@@ -571,6 +571,37 @@
   margin: 2.5em 0;
 }
 
+/* Tables from the editor. Quill stores every cell as <td> (no <th>), so the
+   first row is styled as the header. `!important` overrides the inline
+   black border Quill writes onto <table>. */
+.article-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border: 1px solid hsl(var(--border)) !important;
+  margin: 0 0 1.4em;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875em;
+  line-height: 1.5;
+}
+
+.article-content th,
+.article-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.6em 0.9em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.article-content tr:first-child td,
+.article-content th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
 /* Preserve inline colors/backgrounds authored in the editor while still
    inheriting our editorial font stack. */
 .article-content [style*="color"],

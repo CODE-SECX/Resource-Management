@@ -8,7 +8,6 @@ import {
   getTagsByCategory,
   getLearningTagsByCategory,
   getResourceTagsByCategory,
-  getPayloadTagsByCategory,
   upsertCategoryTagsByNames,
   createSubcategory,
   updateSubcategory,
@@ -120,15 +119,13 @@ export default function Taxonomy() {
         // Perform legacy backfill if not done yet
         if (!backfilledCategories.has(node.id)) {
           try {
-            const [legacyLearn, legacyRes, legacyPayload] = await Promise.all([
+            const [legacyLearn, legacyRes] = await Promise.all([
               getLearningTagsByCategory(user.id, node.id),
-              getResourceTagsByCategory(user.id, node.id),
-              getPayloadTagsByCategory(user.id, categories.find(c => c.id === node.id)?.name || '')
+              getResourceTagsByCategory(user.id, node.id)
             ]);
             const legacyUnion = Array.from(new Set<string>([
               ...legacyLearn,
               ...legacyRes,
-              ...legacyPayload,
             ]));
             if (legacyUnion.length > 0) {
               await upsertCategoryTagsByNames(user.id, node.id, legacyUnion);

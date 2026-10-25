@@ -12,9 +12,6 @@ import { ResourceDetail } from './pages/ResourceDetail';
 import { LearningDetail } from './pages/LearningDetail';
 import PublicLearning from './pages/PublicLearning';
 import PublicResource from './pages/PublicResource';
-import { Payloads } from './pages/Payloads';
-import { PayloadDetail } from './pages/PayloadDetail';
-import { PayloadForm } from './pages/PayloadForm';
 import StickyNotes from './pages/StickyNotes';
 import Taxonomy from './pages/Taxonomy';
 import { LearningForm } from './pages/LearningForm';
@@ -54,10 +51,6 @@ function AppRoutes() {
         <Route path="/learning/:id" element={<LearningDetail />} />
         <Route path="/categories" element={<Navigate to="/taxonomy" replace />} />
         <Route path="/taxonomy" element={<Taxonomy />} />
-        <Route path="/payloads" element={<Payloads />} />
-        <Route path="/payloads/:id" element={<PayloadDetail />} />
-        <Route path="/payloads/create" element={<PayloadForm />} />
-        <Route path="/payloads/:id/edit" element={<PayloadForm />} />
         <Route path="/sticky-notes" element={<StickyNotes />} />
         <Route path="/favourites" element={<Favourites />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -11,7 +11,6 @@ import {
   Menu,
   X,
   Search,
-  Target,
   StickyNote,
   Tag,
   Star
@@ -65,7 +64,6 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Resource Index', href: '/resources/index', icon: BookOpen },
     { name: 'Learning', href: '/learning', icon: GraduationCap },
     { name: 'Learning Index', href: '/learning/index', icon: GraduationCap },
-    { name: 'Payload Arsenal', href: '/payloads', icon: Target },
     { name: 'Sticky Notes', href: '/sticky-notes', icon: StickyNote },
     { name: 'Taxonomy', href: '/taxonomy', icon: Tag },
   ];

@@ -161,7 +161,8 @@
   text-align: left;
 }
 
-.rich-text-editor .ql-editor th {
+.rich-text-editor .ql-editor th,
+.rich-text-editor .ql-editor tr:first-child td {
   background-color: hsl(var(--muted) / 0.35);
   font-weight: 700;
 }

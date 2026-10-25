@@ -363,7 +363,7 @@ export default function Taxonomy() {
 
       const successful = results.filter(result => result.status === 'fulfilled').length;
       // Treat duplicate key errors as benign (race on per-location uniqueness)
-      const failedHard = results.filter(r => r.status === 'rejected' && !(r as any).reason?.code === '23505' && !((r as any).reason?.message || '').includes('duplicate key')).length;
+      const failedHard = results.filter(r => r.status === 'rejected' && (r as any).reason?.code !== '23505' && !((r as any).reason?.message || '').includes('duplicate key')).length;
 
       // Provide detailed feedback
       if (successful > 0 && failedHard === 0) {

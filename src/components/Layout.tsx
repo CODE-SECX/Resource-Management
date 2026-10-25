@@ -61,10 +61,8 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Favourites', href: '/favourites', icon: Star },
     { name: 'Resources', href: '/resources', icon: BookOpen },
-    { name: 'Resource Index', href: '/resources/index', icon: BookOpen },
     { name: 'Learning', href: '/learning', icon: GraduationCap },
-    { name: 'Learning Index', href: '/learning/index', icon: GraduationCap },
-    { name: 'Sticky Notes', href: '/sticky-notes', icon: StickyNote },
+    { name: 'Notes', href: '/sticky-notes', icon: StickyNote },
     { name: 'Taxonomy', href: '/taxonomy', icon: Tag },
   ];
 
@@ -76,7 +74,10 @@ export function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (!user) return;
     const q = searchQuery.trim();
-    if (!q) {
+    // Characters with meaning in PostgREST filter syntax would otherwise break
+    // (or alter) the `.or()` filter below.
+    const term = q.replace(/[,()"\\%*]/g, ' ').trim();
+    if (!term) {
       setSearchResults({ resources: [], learning: [] });
       return;
     }
@@ -89,13 +90,13 @@ export function Layout({ children }: LayoutProps) {
             .from('resources')
             .select('id, title, description, url, created_at')
             .eq('user_id', user.id)
-            .or(`title.ilike.%${q}%,description.ilike.%${q}%,url.ilike.%${q}%`)
+            .or(`title.ilike.%${term}%,description.ilike.%${term}%,url.ilike.%${term}%`)
             .limit(10),
           supabase
             .from('learning')
             .select('id, title, description, url, created_at')
             .eq('user_id', user.id)
-            .or(`title.ilike.%${q}%,description.ilike.%${q}%,url.ilike.%${q}%`)
+            .or(`title.ilike.%${term}%,description.ilike.%${term}%,url.ilike.%${term}%`)
             .limit(10)
         ]);
 
@@ -113,7 +114,7 @@ export function Layout({ children }: LayoutProps) {
     return () => clearTimeout(timeout);
   }, [searchQuery, user]);
 
-  const isActive = (href: string) => location.pathname === href;
+  const isActive = (href: string) => isSectionActive(location.pathname, href);
 
   const SearchResultsPanel = () => (
     <div className="p-2 space-y-3">
@@ -335,7 +336,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Footer */}
       <footer className="bg-card border-t border-border mt-12">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div className="col-span-1 sm:col-span-2">
               <Link to="/" className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -353,7 +354,7 @@ export function Layout({ children }: LayoutProps) {
             <div>
               <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-4">Platform</h3>
               <ul className="space-y-2.5">
-                {navigation.slice(0, 5).map((item) => (
+                {navigation.map((item) => (
                   <li key={item.name}>
                     <Link to={item.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
                       {item.name}
@@ -363,14 +364,6 @@ export function Layout({ children }: LayoutProps) {
               </ul>
             </div>
 
-            <div>
-              <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-4">Support</h3>
-              <ul className="space-y-2.5">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">Documentation</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">Help Center</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">Contact Us</a></li>
-              </ul>
-            </div>
           </div>
 
           <div className="border-t border-border mt-8 pt-6 text-center">
@@ -384,9 +377,14 @@ export function Layout({ children }: LayoutProps) {
   );
 };
 
+// A nav item stays highlighted on its sub-pages (e.g. Resources on /resources/123).
+function isSectionActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
 const MobileNavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
   const location = useLocation();
-  const active = location.pathname === to;
+  const active = isSectionActive(location.pathname, to);
 
   return (
     <Link

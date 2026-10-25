@@ -180,6 +180,14 @@ export function LearningDetail() {
               <Edit2 className="w-5 h-5" />
             </button>
             <button
+              onClick={copyPageLink}
+              className="p-2.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-accent transition-colors duration-150"
+              title={isPageLinkCopied ? 'Copied!' : 'Copy page link'}
+              aria-label="Copy page link"
+            >
+              {isPageLinkCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            </button>
+            <button
               onClick={handleShare}
               className="p-2.5 text-muted-foreground hover:text-success rounded-lg hover:bg-accent transition-colors duration-150"
               title="Share this learning item"

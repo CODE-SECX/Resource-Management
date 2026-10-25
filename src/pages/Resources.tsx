@@ -10,6 +10,7 @@ import { Plus, Search, Edit2, Trash2, Tag, Grid, LayoutList, BookOpen, ArrowUpRi
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
+import { SectionTabs } from '../components/SectionTabs';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/Skeleton';
 
@@ -150,6 +151,7 @@ export function Resources() {
 
   return (
     <div className="space-y-8">
+      <SectionTabs section="resources" className="-mb-4" />
       {/* Header */}
       <PageHeader
         title="Resource Library"

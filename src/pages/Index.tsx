@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Search, GraduationCap, X, ExternalLink, Calendar, Tag as TagIcon, Filter, List, Grid } from 'lucide-react';
 import { FilterPanel, ActiveFilterBar, type FilterChip } from '../components/FilterPanel';
 import { PageHeader } from '../components/ui/PageHeader';
+import { SectionTabs } from '../components/SectionTabs';
 import { Skeleton } from '../components/ui/Skeleton';
 
 export function Index() {
@@ -284,6 +285,7 @@ export function Index() {
         {/* ── Main Content ─────────────────────────────────────────── */}
         <div className="flex-1 lg:ml-0 min-w-0">
           <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
+            <SectionTabs section="learning" className="mb-4" />
             {/* Header */}
             <PageHeader
               title="Learning Resources"

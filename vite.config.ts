@@ -7,7 +7,7 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     outDir: 'dist',
     rollupOptions: {
       output: {

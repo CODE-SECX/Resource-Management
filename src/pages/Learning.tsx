@@ -1,26 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   supabase,
   type Learning,
   type Category,
   type Subcategory,
-  getSubcategories,
-  getTagsByCategories,
-  getTagsForSubcategories,
-  upsertSubcategoriesByNames,
-  upsertTagsByNames,
-  upsertCategoryTagsByNames,
-  setLearningSubcategories,
-  setLearningTags,
   toggleLearningFavourite,
 } from '../lib/supabase';
 import { openContentTarget } from '../utils/openContent';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Filter, Edit2, Trash2, Tag, X, GraduationCap, Grid, LayoutList, BookOpen, ArrowUpRight, Copy, Check, Star, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, Link } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
+import { SectionTabs } from '../components/SectionTabs';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/Skeleton';
 import { FilterPanel, ActiveFilterBar, type FilterChip } from '../components/FilterPanel';
@@ -31,11 +23,7 @@ export function Learning() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [learning, setLearning] = useState<Learning[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<Learning | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -49,34 +37,9 @@ export function Learning() {
   // Taxonomy data received from FilterPanel — used for chip label resolution
   const [panelCats, setPanelCats] = useState<Category[]>([]);
   const [panelSubsMap, setPanelSubsMap] = useState<Map<string, Subcategory[]>>(new Map());
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    url: '',
-    tags: '',
-    difficulty_level: 'Beginner' as Learning['difficulty_level'],
-    categoryIds: [] as string[],
-  });
-  const [selectedFormTags, setSelectedFormTags] = useState<string[]>([]);
-  const [tagInputValue, setTagInputValue] = useState('');
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  const [filteredTagSuggestions, setFilteredTagSuggestions] = useState<string[]>([]);
-  const tagInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFormSubcategories, setSelectedFormSubcategories] = useState<string[]>([]);
-  const [subcategoryInputValue, setSubcategoryInputValue] = useState('');
-  const [showSubcategorySuggestions, setShowSubcategorySuggestions] = useState(false);
-  const [filteredSubcategorySuggestions, setFilteredSubcategorySuggestions] = useState<string[]>([]);
-  const subcategoryInputRef = useRef<HTMLInputElement>(null);
-  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState<string[]>([]);
-
-  const allFormTags = Array.from(new Set(learning.flatMap(item => item.tags || [])));
-
   useEffect(() => {
     if (user) {
       fetchLearning();
-      fetchCategories();
-      fetchAllCategoriesForForm();
     }
   }, [user]);
 
@@ -125,275 +88,6 @@ export function Learning() {
         prev.map(l => l.id === item.id ? { ...l, is_favorite: !newValue } : l)
       );
       toast.error('Failed to update favourite');
-    }
-  };
-
-  const fetchCategories = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          learning_categories!inner(
-            learning_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-
-      const uniqueCategories = data?.reduce((acc, item) => {
-        if (!acc.find((existingCat: Category) => existingCat.id === item.id)) {
-          acc.push({
-            id: item.id,
-            name: item.name,
-            color: item.color,
-            user_id: item.user_id,
-            created_at: item.created_at
-          });
-        }
-        return acc;
-      }, [] as Category[]) || [];
-
-      setCategories(uniqueCategories);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  const fetchAllCategoriesForForm = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-      setAllCategories(data || []);
-    } catch (error) {
-      console.error('Error fetching all categories:', error);
-    }
-  };
-
-  // Load suggested tags and subcategories when category or subcategory selection changes.
-  // NOTE: selectedFormSubcategories in this legacy inline form stores subcategory *names*
-  // (free-text input), so we resolve names → IDs from the getSubcategories results.
-  useEffect(() => {
-    const loadSuggestions = async () => {
-      if (!user) return;
-
-      console.log('[TagSuggestions/Learning] Effect fired — categoryIds:', formData.categoryIds, '| selectedFormSubcategories (names):', selectedFormSubcategories);
-
-      if (formData.categoryIds.length > 0) {
-        try {
-          // Fetch subcategories for selected categories (needed for both name→id lookup and filteredSubcategories)
-          const subcatResults = await Promise.all(
-            formData.categoryIds.map(catId => getSubcategories(user.id!, catId))
-          );
-          const allSubcats = subcatResults.flat();
-          const allSubcatNames = Array.from(new Set(allSubcats.map((s: any) => s.name)));
-          setFilteredSubcategories(allSubcatNames);
-
-          // 1. Category-level tags (subcategory_id IS NULL)
-          console.log('[TagSuggestions/Learning] Fetching category-level tags for categoryIds:', formData.categoryIds);
-          const catTags = await getTagsByCategories(user.id, formData.categoryIds);
-          console.log('[TagSuggestions/Learning] Category-level tags returned:', catTags.map(t => t.name));
-
-          // 2. Subcategory-level tags — resolve names → IDs using the fetched subcats
-          let subcatTagNames: string[] = [];
-          if (selectedFormSubcategories.length > 0) {
-            const selectedSubcatIds = allSubcats
-              .filter((s: any) => selectedFormSubcategories.includes(s.name))
-              .map((s: any) => s.id);
-            console.log('[TagSuggestions/Learning] Resolved subcategory IDs from names:', selectedSubcatIds);
-            if (selectedSubcatIds.length > 0) {
-              const subcatTags = await getTagsForSubcategories(user.id, selectedSubcatIds);
-              subcatTagNames = subcatTags.map(t => t.name);
-              console.log('[TagSuggestions/Learning] Subcategory-level tags returned:', subcatTagNames);
-            }
-          } else {
-            console.log('[TagSuggestions/Learning] No subcategories selected, skipping subcategory tag fetch');
-          }
-
-          // 3. Merge & deduplicate
-          const merged = Array.from(
-            new Set([...catTags.map(t => t.name), ...subcatTagNames])
-          ).sort();
-          console.log('[TagSuggestions/Learning] Final merged suggestedTags:', merged);
-          setSuggestedTags(merged);
-        } catch (e) {
-          console.error('[TagSuggestions/Learning] Error fetching tag suggestions:', e);
-          setSuggestedTags(allFormTags);
-          setFilteredSubcategories(Array.from(new Set(learning.flatMap(item => item.subcategories || []))));
-        }
-      } else {
-        console.log('[TagSuggestions/Learning] No categories selected, using allFormTags');
-        setSuggestedTags(allFormTags);
-        setFilteredSubcategories(Array.from(new Set(learning.flatMap(item => item.subcategories || []))));
-      }
-    };
-    loadSuggestions();
-  }, [formData.categoryIds, selectedFormSubcategories, user]);
-
-  const handleTagInputChange = (value: string) => {
-    setTagInputValue(value);
-    if (value.trim()) {
-      const allAvailableTags = Array.from(new Set([...suggestedTags, ...allFormTags]));
-      const suggestions = allAvailableTags
-        .filter(tag => tag.toLowerCase().includes(value.toLowerCase()) && !selectedFormTags.includes(tag))
-        .slice(0, 8);
-      setFilteredTagSuggestions(suggestions);
-      setShowTagSuggestions(suggestions.length > 0);
-    } else {
-      setShowTagSuggestions(false);
-    }
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newTag = tagInputValue.trim();
-      if (newTag && !selectedFormTags.includes(newTag)) {
-        setSelectedFormTags(prev => [...prev, newTag]);
-      }
-      setTagInputValue('');
-      setShowTagSuggestions(false);
-    } else if (e.key === 'Escape') {
-      setShowTagSuggestions(false);
-    }
-  };
-
-  const addTagFromSuggestion = (tag: string) => {
-    if (!selectedFormTags.includes(tag)) {
-      setSelectedFormTags(prev => [...prev, tag]);
-    }
-    setTagInputValue('');
-    setShowTagSuggestions(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const finalTags = selectedFormTags;
-      const finalSubcategories = selectedFormSubcategories;
-      const learningData = {
-        title: formData.title,
-        description: formData.description,
-        url: formData.url,
-        tags: finalTags,
-        subcategories: finalSubcategories,
-        difficulty_level: formData.difficulty_level,
-        user_id: user.id,
-      };
-
-      let learningId: string;
-
-      if (editingItem) {
-        const { error } = await supabase
-          .from('learning')
-          .update(learningData)
-          .eq('id', editingItem.id)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-        learningId = editingItem.id;
-        toast.success('Learning item updated successfully!');
-      } else {
-        const { data, error } = await supabase
-          .from('learning')
-          .insert([learningData])
-          .select()
-          .single();
-
-        if (error) throw error;
-        learningId = data.id;
-        toast.success('Learning item created successfully!');
-      }
-
-      await supabase
-        .from('learning_categories')
-        .delete()
-        .eq('learning_id', learningId);
-
-      if (formData.categoryIds.length > 0) {
-        const categoryConnections = formData.categoryIds.map(categoryId => ({
-          learning_id: learningId,
-          category_id: categoryId,
-        }));
-
-        await supabase
-          .from('learning_categories')
-          .insert(categoryConnections);
-      }
-
-      let allUpsertedSubcats: { id: string; name: string }[] = [];
-      if (selectedFormSubcategories.length > 0 && formData.categoryIds.length > 0) {
-        const subcatResults = await Promise.all(
-          formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
-        );
-        const subcatsFlat = subcatResults.flat();
-        allUpsertedSubcats = subcatsFlat.map(s => ({ id: s.id, name: s.name }));
-        const uniqueSubcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-        if (uniqueSubcatIds.length > 0) {
-          await setLearningSubcategories(learningId, uniqueSubcatIds);
-        }
-      }
-
-      if (selectedFormTags.length > 0 && formData.categoryIds.length > 0) {
-        let tagIds: string[] = [];
-        if (selectedFormSubcategories.length > 0) {
-          let subcatIds: string[] = [];
-          if (allUpsertedSubcats.length > 0) {
-            subcatIds = Array.from(new Set(allUpsertedSubcats.map(s => s.id)));
-          } else {
-            const subcatResults = await Promise.all(
-              formData.categoryIds.map((catId) => upsertSubcategoriesByNames(user.id!, catId, selectedFormSubcategories))
-            );
-            subcatIds = Array.from(new Set(subcatResults.flat().map(s => s.id)));
-          }
-          if (subcatIds.length > 0) {
-            const tagResults = await Promise.all(
-              subcatIds.map((subcatId) => upsertTagsByNames(user.id!, subcatId, selectedFormTags))
-            );
-            tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
-          }
-        } else {
-          const tagResults = await Promise.all(
-            formData.categoryIds.map((catId) => upsertCategoryTagsByNames(user.id!, catId, selectedFormTags))
-          );
-          tagIds = Array.from(new Set(tagResults.flat().map(t => t.id)));
-        }
-        if (tagIds.length > 0) {
-          await setLearningTags(learningId, tagIds);
-        }
-      }
-
-      setFormData({
-        title: '',
-        description: '',
-        url: '',
-        tags: '',
-        difficulty_level: 'Beginner',
-        categoryIds: [],
-      });
-      setSelectedFormTags([]);
-      setSelectedFormSubcategories([]);
-      setTagInputValue('');
-      setSubcategoryInputValue('');
-      setShowTagSuggestions(false);
-      setShowSubcategorySuggestions(false);
-      setShowForm(false);
-      setEditingItem(null);
-      fetchLearning();
-    } catch (error) {
-      console.error('Error saving learning item:', error);
-      toast.error('Failed to save learning item');
     }
   };
 
@@ -455,13 +149,6 @@ export function Learning() {
       default: return 'from-muted-foreground/20 to-transparent';
     }
   };
-
-  const allTags = Array.from(new Set(learning.flatMap(item => item.tags)));
-  const allSubcategories = Array.from(new Map(
-    learning
-      .flatMap(item => item.taxonomySubcategories || [])
-      .map(sc => [sc.id, sc])
-  ).values());
 
   const clearAllFilters = () => {
     setSelectedCategories([]);
@@ -574,6 +261,7 @@ export function Learning() {
 
   return (
     <div className="space-y-8">
+      <SectionTabs section="learning" className="-mb-4" />
       {/* Header */}
       <PageHeader
         title="Learning Resources"
@@ -797,309 +485,6 @@ export function Learning() {
         )}
       </div>
 
-      {/* Learning Form Modal - Removed - now using dedicated page */}
-      {false && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-            <div className="p-6 border-b border-gray-700 bg-gray-900/50">
-              <h2 className="text-lg font-semibold text-gray-100">
-                {editingItem ? 'Edit Learning Item' : 'Add New Learning Item'}
-              </h2>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Description
-                </label>
-                <RichTextEditor
-                  value={formData.description}
-                  onChange={(content) => setFormData(prev => ({ ...prev, description: content }))}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Difficulty Level *
-                </label>
-                <select
-                  required
-                  value={formData.difficulty_level}
-                  onChange={(e) => setFormData(prev => ({ ...prev, difficulty_level: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-                >
-                  {difficultyLevels.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Tags
-                </label>
-
-                {selectedFormTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {selectedFormTags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => {
-                          setSelectedFormTags(prev => prev.filter(t => t !== tag));
-                        }}
-                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white border border-indigo-500 transition-colors"
-                      >
-                        {tag}
-                        <X className="ml-1 w-3 h-3" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {suggestedTags.length > 0 && (
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-400 mb-1">
-                      {formData.categoryIds.length > 0
-                        ? 'Relevant tags for selected categories (from taxonomy)'
-                        : 'All available tags (taxonomy + existing)'}
-                    </label>
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                      {suggestedTags
-                        .filter(tag => !selectedFormTags.includes(tag))
-                        .map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => addTagFromSuggestion(tag)}
-                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
-                          >
-                            <Tag className="mr-1 w-3 h-3" />
-                            {tag}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="relative">
-                  <label className="block text-xs text-gray-400 mb-1">Type to search or add new tags</label>
-                  <input
-                    ref={tagInputRef}
-                    type="text"
-                    value={tagInputValue}
-                    onChange={(e) => handleTagInputChange(e.target.value)}
-                    onKeyDown={handleTagInputKeyDown}
-                    placeholder="Start typing to see suggestions..."
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors bg-gray-700 text-gray-100"
-                  />
-
-                  {showTagSuggestions && (
-                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredTagSuggestions.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => addTagFromSuggestion(tag)}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center"
-                        >
-                          <Tag className="mr-2 w-3 h-3 text-gray-400" />
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Subcategories */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Subcategories</label>
-
-                {selectedFormSubcategories.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {selectedFormSubcategories.map((sc) => (
-                      <button
-                        key={sc}
-                        type="button"
-                        onClick={() => {
-                          setSelectedFormSubcategories(prev => prev.filter(s => s !== sc));
-                        }}
-                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-600 text-white border border-purple-500 transition-colors"
-                      >
-                        {sc}
-                        <X className="ml-1 w-3 h-3" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {filteredSubcategories.length > 0 && (
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-400 mb-1">
-                      {formData.categoryIds.length > 0
-                        ? 'Relevant subcategories for selected categories'
-                        : 'All available subcategories'}
-                    </label>
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                      {filteredSubcategories
-                        .filter(sc => !selectedFormSubcategories.includes(sc))
-                        .map((sc) => (
-                          <button
-                            key={sc}
-                            type="button"
-                            onClick={() => setSelectedFormSubcategories(prev => [...prev, sc])}
-                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors"
-                          >
-                            {sc}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="relative">
-                  <label className="block text-xs text-gray-400 mb-1">Type to search or add new subcategories</label>
-                  <input
-                    ref={subcategoryInputRef}
-                    type="text"
-                    value={subcategoryInputValue}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSubcategoryInputValue(value);
-                      if (value.trim()) {
-                        const suggestions = filteredSubcategories
-                          .filter(sc => sc.toLowerCase().includes(value.toLowerCase()) && !selectedFormSubcategories.includes(sc))
-                          .slice(0, 5);
-                        setFilteredSubcategorySuggestions(suggestions);
-                        setShowSubcategorySuggestions(suggestions.length > 0);
-                      } else {
-                        setShowSubcategorySuggestions(false);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        const newSc = subcategoryInputValue.trim();
-                        if (newSc && !selectedFormSubcategories.includes(newSc)) {
-                          setSelectedFormSubcategories(prev => [...prev, newSc]);
-                        }
-                        setSubcategoryInputValue('');
-                        setShowSubcategorySuggestions(false);
-                      } else if (e.key === 'Escape') {
-                        setShowSubcategorySuggestions(false);
-                      }
-                    }}
-                    placeholder="Start typing to see suggestions..."
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors bg-gray-700 text-gray-100"
-                  />
-
-                  {showSubcategorySuggestions && (
-                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredSubcategorySuggestions.map((sc) => (
-                        <button
-                          key={sc}
-                          type="button"
-                          onClick={() => {
-                            if (!selectedFormSubcategories.includes(sc)) {
-                              setSelectedFormSubcategories(prev => [...prev, sc]);
-                            }
-                            setSubcategoryInputValue('');
-                            setShowSubcategorySuggestions(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 transition-colors"
-                        >
-                          {sc}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Categories */}
-              {allCategories.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Categories
-                  </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-600 rounded-lg p-3 bg-gray-700">
-                    {allCategories.map((category) => (
-                      <label key={category.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.categoryIds.includes(category.id)}
-                          onChange={(e) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              categoryIds: e.target.checked
-                                ? [...prev.categoryIds, category.id]
-                                : prev.categoryIds.filter(id => id !== category.id),
-                            }));
-                          }}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-200">{category.name}</span>
-                        <div
-                          className="ml-2 w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingItem(null);
-                  }}
-                  className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
-                >
-                  {editingItem ? 'Update' : 'Create'} Learning Item
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Learning Grid/List View */}
       <div className={isGridLayout ? "grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-3"}>
         {filteredLearning.map((item) => {
@@ -1296,7 +681,7 @@ export function Learning() {
               : 'Try adjusting your search or filters.'}
           </p>
           {learning.length === 0 && (
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => navigate('/learning/new')}>
               <Plus className="w-4 h-4" />
               Add Your First Learning Item
             </Button>

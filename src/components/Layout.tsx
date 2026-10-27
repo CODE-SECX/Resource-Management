@@ -1,82 +1,159 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import {
-  Home,
   BookOpen,
   GraduationCap,
+  Home,
   LogOut,
   Menu,
-  X,
   Search,
+  Sparkles,
   StickyNote,
+  Star,
   Tag,
-  Star
+  Wand2,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: string;
+  adminOnly?: boolean;
+}
+
+const navigation: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'Workspace',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: Home },
+      { name: 'Favourites', href: '/favourites', icon: Star },
+    ],
+  },
+  {
+    label: 'Library',
+    items: [
+      { name: 'Resources', href: '/resources', icon: BookOpen },
+      { name: 'Learning', href: '/learning', icon: GraduationCap },
+      { name: 'Notes', href: '/sticky-notes', icon: StickyNote },
+    ],
+  },
+  {
+    label: 'Organise',
+    items: [{ name: 'Taxonomy', href: '/taxonomy', icon: Tag }],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { name: 'AI Assistant', href: '/ai', icon: Sparkles, badge: 'New' },
+      { name: 'Library Organizer', href: '/ai/organize', icon: Wand2, adminOnly: true },
+    ],
+  },
+];
+
+interface SearchHit {
+  id: string;
+  title: string;
+  url: string | null;
+}
+
+// A nav item stays highlighted on its sub-pages (e.g. Resources on /resources/123).
+function isSectionActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+function Logo() {
+  return (
+    <Link to="/" className="group flex shrink-0 items-center gap-2">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm transition-transform duration-200 group-hover:scale-105">
+        <BookOpen className="h-4 w-4 text-primary-foreground" />
+      </div>
+      <span className="hidden text-lg font-bold tracking-tight text-foreground xs:block">ResourceHub</span>
+    </Link>
+  );
+}
+
 export function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
+  const visibleNav = navigation
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.adminOnly || isAdmin) }))
+    .filter((group) => group.items.length > 0);
+  // Highlight only the most specific match (/ai/organize shouldn't also light up /ai).
+  const activeHref = visibleNav
+    .flatMap((g) => g.items.map((i) => i.href))
+    .filter((href) => isSectionActive(location.pathname, href))
+    .sort((a, b) => b.length - a.length)[0];
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ resources: any[]; learning: any[] }>({ resources: [], learning: [] });
+  const [searchResults, setSearchResults] = useState<{ resources: SearchHit[]; learning: SearchHit[] }>({ resources: [], learning: [] });
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Close everything on navigation
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setMenuOpen(false);
+    setUserMenuOpen(false);
     setSearchOpen(false);
     setSearchQuery('');
     setSearchResults({ resources: [], learning: [] });
-  }, [location]);
+  }, [location.pathname]);
 
-  // Prevent body scroll while the mobile menu is open
+  // Keep the closed drawer out of the tab order / accessibility tree
+  // (React 18 has no `inert` prop, so set the attribute directly).
   useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    drawerRef.current?.toggleAttribute('inert', !menuOpen);
+  }, [menuOpen]);
+
+  // Drawer: lock scroll, close on Escape, move focus in and back out
+  useEffect(() => {
+    if (!menuOpen) return;
+    document.body.style.overflow = 'hidden';
+    drawerRef.current?.querySelector<HTMLElement>('a, button')?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    const menuButton = menuButtonRef.current;
     return () => {
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      menuButton?.focus();
     };
-  }, [isMobileMenuOpen]);
+  }, [menuOpen]);
 
-  // Close the search dropdown on outside click
+  // Close the search dropdown / user menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setSearchOpen(false);
-      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) setSearchOpen(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Favourites', href: '/favourites', icon: Star },
-    { name: 'Resources', href: '/resources', icon: BookOpen },
-    { name: 'Learning', href: '/learning', icon: GraduationCap },
-    { name: 'Notes', href: '/sticky-notes', icon: StickyNote },
-    { name: 'Taxonomy', href: '/taxonomy', icon: Tag },
-  ];
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
   // Debounced global search
   useEffect(() => {
     if (!user) return;
-    const q = searchQuery.trim();
     // Characters with meaning in PostgREST filter syntax would otherwise break
     // (or alter) the `.or()` filter below.
-    const term = q.replace(/[,()"\\%*]/g, ' ').trim();
+    const term = searchQuery.trim().replace(/[,()"\\%*]/g, ' ').trim();
     if (!term) {
       setSearchResults({ resources: [], learning: [] });
       return;
@@ -88,23 +165,19 @@ export function Layout({ children }: LayoutProps) {
         const [resResources, resLearning] = await Promise.all([
           supabase
             .from('resources')
-            .select('id, title, description, url, created_at')
+            .select('id, title, url')
             .eq('user_id', user.id)
             .or(`title.ilike.%${term}%,description.ilike.%${term}%,url.ilike.%${term}%`)
-            .limit(10),
+            .limit(6),
           supabase
             .from('learning')
-            .select('id, title, description, url, created_at')
+            .select('id, title, url')
             .eq('user_id', user.id)
             .or(`title.ilike.%${term}%,description.ilike.%${term}%,url.ilike.%${term}%`)
-            .limit(10)
+            .limit(6),
         ]);
-
-        setSearchResults({
-          resources: resResources.data || [],
-          learning: resLearning.data || []
-        });
-      } catch (e) {
+        setSearchResults({ resources: resResources.data || [], learning: resLearning.data || [] });
+      } catch {
         setSearchResults({ resources: [], learning: [] });
       } finally {
         setIsSearching(false);
@@ -114,288 +187,226 @@ export function Layout({ children }: LayoutProps) {
     return () => clearTimeout(timeout);
   }, [searchQuery, user]);
 
-  const isActive = (href: string) => isSectionActive(location.pathname, href);
+  const askAi = () => navigate(`/ai?q=${encodeURIComponent(searchQuery.trim())}`);
 
-  const SearchResultsPanel = () => (
-    <div className="p-2 space-y-3">
-      <div>
-        <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resources</div>
-        {searchResults.resources.length === 0 && (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
-        )}
-        {searchResults.resources.map((r) => (
-          <Link
-            key={r.id}
-            to={`/resources/${r.id}`}
-            onClick={() => setSearchOpen(false)}
-            className="block rounded-md px-3 py-2 hover:bg-accent transition-colors duration-150"
-          >
-            <div className="text-foreground text-sm font-medium line-clamp-1">{r.title}</div>
-            {r.url && (
-              <div className="text-xs text-primary line-clamp-1">{r.url}</div>
-            )}
-          </Link>
-        ))}
-      </div>
-      <div>
-        <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Learning</div>
-        {searchResults.learning.length === 0 && (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
-        )}
-        {searchResults.learning.map((l) => (
-          <Link
-            key={l.id}
-            to={`/learning/${l.id}`}
-            onClick={() => setSearchOpen(false)}
-            className="block rounded-md px-3 py-2 hover:bg-accent transition-colors duration-150"
-          >
-            <div className="text-foreground text-sm font-medium line-clamp-1">{l.title}</div>
-            {l.url && (
-              <div className="text-xs text-primary line-clamp-1">{l.url}</div>
-            )}
-          </Link>
-        ))}
-      </div>
+  const renderSearchPanel = () => (
+    <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[28rem] overflow-auto rounded-xl border border-border bg-popover shadow-dropdown animate-scale-in">
+      <button
+        onClick={askAi}
+        className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left text-sm transition-colors hover:bg-accent"
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Sparkles className="h-4 w-4 text-primary" />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-medium text-foreground">Ask AI</span>
+          <span className="block truncate text-xs text-muted-foreground">“{searchQuery.trim()}” — answered from your library</span>
+        </span>
+      </button>
+      {isSearching ? (
+        <div className="p-4 text-sm text-muted-foreground">Searching…</div>
+      ) : (
+        <div className="space-y-3 p-2">
+          {(
+            [
+              ['Resources', searchResults.resources, '/resources'],
+              ['Learning', searchResults.learning, '/learning'],
+            ] as const
+          ).map(([label, hits, base]) => (
+            <div key={label}>
+              <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+              {hits.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>}
+              {hits.map((hit) => (
+                <Link key={hit.id} to={`${base}/${hit.id}`} className="block rounded-md px-3 py-2 transition-colors duration-150 hover:bg-accent">
+                  <div className="line-clamp-1 text-sm font-medium text-foreground">{hit.title}</div>
+                  {hit.url && <div className="line-clamp-1 text-xs text-primary">{hit.url}</div>}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
+  const renderSearch = (className: string) => (
+    <div className={`relative ${className}`} ref={searchContainerRef}>
+      <div className="flex items-center rounded-lg border border-border bg-secondary/60 px-3 transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/50">
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSearchOpen(true);
+          }}
+          onFocus={() => setSearchOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && searchQuery.trim()) askAi();
+            if (e.key === 'Escape') setSearchOpen(false);
+          }}
+          placeholder="Search or ask your library…"
+          aria-label="Search resources and learning"
+          className="w-full border-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+        />
+      </div>
+      {searchOpen && searchQuery.trim() && renderSearchPanel()}
+    </div>
+  );
+
+  const initial = (user?.user_metadata?.name || user?.email || '?').charAt(0).toUpperCase();
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
-        <nav className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 gap-4">
-            {/* Logo and brand */}
-            <Link to="/" className="flex items-center gap-2 group shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-sm">
-                <BookOpen className="w-4.5 h-4.5 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-bold text-foreground tracking-tight hidden xs:block">
-                ResourceHub
-              </span>
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-8xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="btn-ghost -ml-2"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open navigation menu"
+            aria-expanded={menuOpen}
+            aria-controls="app-drawer"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
+          <Logo />
+
+          {renderSearch('mx-auto hidden w-full max-w-xl sm:block')}
+
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-0">
+            <Link to="/ai" className="btn-ghost text-primary md:hidden" aria-label="Ask AI">
+              <Sparkles className="h-5 w-5" />
             </Link>
-
-            {/* Desktop navigation */}
-            <div className="hidden lg:flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isFavourites = item.href === '/favourites';
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`nav-link flex items-center gap-1.5 whitespace-nowrap ${isActive(item.href) ? 'active' : ''}`}
-                  >
-                    <Icon className={`w-4 h-4 ${isFavourites ? 'text-amber-400' + (isActive(item.href) ? ' fill-amber-400' : '') : ''}`} />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Right side actions */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Global Search */}
-              <div className="relative hidden sm:block" ref={searchContainerRef}>
-                <div className="flex items-center bg-secondary/60 border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-primary transition-all duration-200 w-56 lg:w-64">
-                  <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setSearchOpen(true);
-                    }}
-                    onFocus={() => setSearchOpen(true)}
-                    placeholder="Search..."
-                    className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground px-2 py-0.5 w-full focus:outline-none border-none"
-                  />
-                </div>
-                {searchOpen && (searchQuery || isSearching) && (
-                  <div className="absolute right-0 mt-2 w-[28rem] max-w-[90vw] max-h-96 overflow-auto bg-popover border border-border rounded-xl shadow-dropdown z-50 animate-scale-in">
-                    <div className="p-2 border-b border-border flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Search results</span>
-                      <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSearchOpen(false)}>Close</button>
-                    </div>
-                    {isSearching ? (
-                      <div className="p-4 text-sm text-muted-foreground">Searching...</div>
-                    ) : (
-                      <SearchResultsPanel />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <ThemeToggle />
-
-              {/* User menu */}
-              {user && (
-                <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border">
-                  <div className="text-right leading-tight">
-                    <p className="text-sm text-foreground font-medium max-w-[10rem] truncate">{user.email}</p>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="btn-ghost"
-                    title="Sign out"
-                    aria-label="Sign out"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-
-              {/* Mobile menu button */}
-              <button
-                type="button"
-                className="btn-ghost lg:hidden"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={isMobileMenuOpen}
-              >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Mobile / tablet collapsible menu */}
-        <div
-          className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-250 ease-out-soft ${
-            isMobileMenuOpen ? 'max-h-[calc(100vh-4rem)] opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
-          <div className="px-4 pt-3 pb-4 space-y-1 bg-card border-t border-border overflow-y-auto max-h-[calc(100vh-4rem)]">
-            {/* Mobile Search */}
-            <div className="relative sm:hidden mb-2">
-              <div className="flex items-center bg-secondary/60 border border-border rounded-lg px-3 focus-within:ring-2 focus-within:ring-ring/50">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchOpen(true);
-                  }}
-                  onFocus={() => setSearchOpen(true)}
-                  placeholder="Search resources & learning..."
-                  className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground px-2 py-2.5 w-full focus:outline-none border-none"
-                />
-              </div>
-              {searchOpen && (searchQuery || isSearching) && (
-                <div className="mt-2 w-full max-h-72 overflow-auto bg-popover border border-border rounded-xl shadow-dropdown z-50">
-                  <div className="p-2 border-b border-border flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">Search results</span>
-                    <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setSearchOpen(false)}>Close</button>
-                  </div>
-                  {isSearching ? (
-                    <div className="p-4 text-sm text-muted-foreground">Searching...</div>
-                  ) : (
-                    <SearchResultsPanel />
-                  )}
-                </div>
-              )}
-            </div>
-
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isFavourites = item.href === '/favourites';
-              return (
-                <MobileNavLink key={item.name} to={item.href}>
-                  <Icon className={`w-5 h-5 ${isFavourites ? 'text-amber-400' : ''}`} />
-                  <span>{item.name}</span>
-                </MobileNavLink>
-              );
-            })}
+            <Link
+              to="/ai"
+              className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 md:inline-flex"
+            >
+              <Sparkles className="h-4 w-4" />
+              Ask AI
+            </Link>
+            <ThemeToggle />
 
             {user && (
-              <div className="pt-2 mt-2 border-t border-border space-y-1">
-                <div className="px-3 py-1.5 text-xs text-muted-foreground truncate">{user.email}</div>
+              <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={handleSignOut}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150 min-h-[44px]"
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-offset-background transition hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Account menu"
+                  aria-expanded={userMenuOpen}
                 >
-                  <LogOut className="w-5 h-5" />
-                  <span>Sign out</span>
+                  {initial}
                 </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-60 rounded-xl border border-border bg-popover p-1 shadow-dropdown animate-scale-in">
+                    <div className="px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Signed in as</p>
+                      <p className="truncate text-sm font-medium text-foreground">{user.email}</p>
+                    </div>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      onClick={signOut}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </header>
 
+      {/* Navigation drawer (all screen sizes) */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 ${menuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+      />
+      <aside
+        id="app-drawer"
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-modal transition-transform duration-300 ease-out-soft ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-border px-4">
+          <Logo />
+          <button className="btn-ghost" onClick={() => setMenuOpen(false)} aria-label="Close navigation menu">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+          {visibleNav.map((group) => (
+            <div key={group.label}>
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">{group.label}</p>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = item.href === activeHref;
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        to={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                          active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                        }`}
+                      >
+                        <Icon className={`h-[18px] w-[18px] ${item.href === '/favourites' ? 'text-amber-400' : ''}`} />
+                        <span className="flex-1">{item.name}</span>
+                        {item.badge && (
+                          <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-primary-foreground">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Search lives in the drawer on phones (no room in the header) */}
+        <div className="border-t border-border p-3 sm:hidden">{menuOpen && renderSearch('w-full')}</div>
+
+        {user && (
+          <div className="border-t border-border p-3">
+            <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {initial}
+              </div>
+              <p className="min-w-0 flex-1 truncate text-sm text-foreground">{user.email}</p>
+              <button onClick={signOut} className="btn-ghost" aria-label="Sign out" title="Sign out">
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+
       {/* Main content */}
       <main className="flex-1">
-        <div className="px-4 sm:px-6 lg:px-10 xl:px-16 py-6 sm:py-8 max-w-8xl mx-auto w-full">
-          <div className="animate-fade-in-up">
-            {children}
-          </div>
+        <div className="mx-auto w-full max-w-8xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10 xl:px-16">
+          <div className="animate-fade-in-up">{children}</div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-border mt-12">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="col-span-1 sm:col-span-2">
-              <Link to="/" className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <BookOpen className="w-4.5 h-4.5 text-primary-foreground" />
-                </div>
-                <span className="text-lg font-bold text-foreground tracking-tight">
-                  ResourceHub
-                </span>
-              </Link>
-              <p className="text-muted-foreground max-w-md leading-relaxed text-sm">
-                Your comprehensive platform for learning resources, knowledge management, and educational content.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-4">Platform</h3>
-              <ul className="space-y-2.5">
-                {navigation.map((item) => (
-                  <li key={item.name}>
-                    <Link to={item.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-          </div>
-
-          <div className="border-t border-border mt-8 pt-6 text-center">
-            <p className="text-muted-foreground text-sm">
-              © {new Date().getFullYear()} ResourceHub. Built for learners everywhere.
-            </p>
-          </div>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-8xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
+          <span>© {new Date().getFullYear()} ResourceHub</span>
+          <span>Your library, organised — with answers from your own content.</span>
         </div>
       </footer>
     </div>
   );
-};
-
-// A nav item stays highlighted on its sub-pages (e.g. Resources on /resources/123).
-function isSectionActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + '/');
 }
-
-const MobileNavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
-  const location = useLocation();
-  const active = isSectionActive(location.pathname, to);
-
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium transition-colors duration-150 min-h-[44px] ${
-        active
-          ? 'bg-primary/10 text-primary'
-          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-      }`}
-    >
-      {children}
-    </Link>
-  );
-};

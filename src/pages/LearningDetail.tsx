@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase, type Learning, createShareToken } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, ExternalLink, Edit2, Trash2, GraduationCap, Tag, Calendar, Share2, Copy, Check } from 'lucide-react';
+import { RelatedContent } from '../components/RelatedContent';
 import toast from 'react-hot-toast';
 import { getContentTarget, openContentTarget } from '../utils/openContent';
 
@@ -368,6 +369,7 @@ export function LearningDetail() {
                 </div>
               );
             })()}
+            <RelatedContent type="learning" id={learning.id} />
           </div>
         </article>
       </div>

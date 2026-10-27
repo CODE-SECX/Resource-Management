@@ -13,6 +13,7 @@ import {
 } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Tag as TagIcon, X, ArrowLeft, Save, FileText, Folder, Lightbulb, Search, Info } from 'lucide-react';
+import { reindexItem } from '../lib/ai';
 import toast from 'react-hot-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { ColorCodedSubcategorySelector } from '../components/ColorCodedSubcategorySelector';
@@ -364,6 +365,7 @@ export function LearningForm() {
         }
       }
 
+      reindexItem('learning', learningId);
       navigate('/learning');
     } catch (error) {
       console.error('Error saving learning item:', error);

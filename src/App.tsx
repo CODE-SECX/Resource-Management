@@ -25,6 +25,8 @@ const Taxonomy = lazy(() => import('./pages/Taxonomy'));
 const LearningForm = named(() => import('./pages/LearningForm'), 'LearningForm');
 const ResourceForm = named(() => import('./pages/ResourceForm'), 'ResourceForm');
 const Favourites = named(() => import('./pages/Favourites'), 'Favourites');
+const AiAssistant = lazy(() => import('./pages/AiAssistant'));
+const LibraryOrganizer = lazy(() => import('./pages/LibraryOrganizer'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function PageLoader() {
@@ -71,6 +73,8 @@ function AppRoutes() {
             <Route path="/taxonomy" element={<Taxonomy />} />
             <Route path="/sticky-notes" element={<StickyNotes />} />
             <Route path="/favourites" element={<Favourites />} />
+            <Route path="/ai" element={<AiAssistant />} />
+            <Route path="/ai/organize" element={<LibraryOrganizer />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

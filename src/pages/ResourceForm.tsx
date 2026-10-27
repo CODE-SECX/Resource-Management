@@ -240,11 +240,13 @@ export function ResourceForm() {
       });
       setSelectedFormTags(resource.tags || []);
       
-      const subcategoryNames = resource.subcategories || [];
-      const subcategoryIds = subcategoryNames.map((name: string) => {
-        const found = availableSubcategoriesWithCategory.find(sub => sub.name === name);
+      // Stored as subcategory UUIDs (older rows may hold names), so resolve against the user's subcategories.
+      const stored: string[] = resource.subcategories || [];
+      const { data: userSubs } = await supabase.from('subcategories').select('id, name').eq('user_id', user.id);
+      const subcategoryIds = Array.from(new Set(stored.map((v) => {
+        const found = (userSubs || []).find((s) => s.id === v || s.name === v);
         return found ? found.id : null;
-      }).filter((id: string | null) => id !== null) as string[];
+      }).filter((v): v is string => v !== null)));
       setSelectedFormSubcategories(subcategoryIds);
       setTagInputValue('');
     } catch (error) {

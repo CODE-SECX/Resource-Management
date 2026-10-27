@@ -529,7 +529,7 @@ export function Learning() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(`/learning/${item.id}/edit`, '_blank');
+                        navigate(`/learning/${item.id}/edit`);
                       }}
                       className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors duration-150"
                       title="Edit"

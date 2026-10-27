@@ -23,6 +23,7 @@ export function Resources() {
   const [isGridLayout, setIsGridLayout] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [copiedResourceId, setCopiedResourceId] = useState<string | null>(null);
+  const [subcategoryNames, setSubcategoryNames] = useState<Record<string, string>>({});
 
 
 
@@ -55,6 +56,9 @@ export function Resources() {
       })) || [];
 
       setResources(resourcesWithCategories);
+
+      const { data: subs } = await supabase.from('subcategories').select('id, name').eq('user_id', user.id);
+      setSubcategoryNames(Object.fromEntries((subs || []).map(s => [s.id, s.name])));
     } catch (error) {
       console.error('Error fetching resources:', error);
       toast.error('Failed to fetch resources');
@@ -225,7 +229,7 @@ export function Resources() {
                     </button>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     <button
-                      onClick={(e) => { e.stopPropagation(); window.open(`/resources/${resource.id}/edit`, '_blank'); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/resources/${resource.id}/edit`); }}
                       className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors duration-150"
                       title="Edit"
                       aria-label="Edit resource"
@@ -278,7 +282,7 @@ export function Resources() {
                         key={idx}
                         className="category-tag"
                       >
-                        {sc}
+                        {subcategoryNames[sc] ?? sc}
                       </span>
                     ))}
                   </div>
